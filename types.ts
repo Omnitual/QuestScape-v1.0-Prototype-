@@ -1,4 +1,5 @@
 
+
 export enum QuestType {
     GRANDMASTER = 'GRANDMASTER',
     DAILY = 'DAILY',
@@ -177,6 +178,11 @@ export const DEFAULT_SIDE_QUEST_TEMPLATES: Omit<SideQuestTemplate, 'id'>[] = [
     { template: "Meditate for {n} minutes", min: 2, max: 10, unitXP: 5, unitGold: 0.5, baseQP: 2, tags: ['MIND'] },
     { template: "Declutter {n} items", min: 1, max: 5, unitXP: 5, unitGold: 1, baseQP: 1, tags: ['ORDER'] },
     { template: "Focus for {n} minutes", min: 15, max: 45, unitXP: 1, unitGold: 0.2, baseQP: 2, tags: ['FOCUS'] },
+    // New additions
+    { template: "Drink {n} glasses of water", min: 1, max: 4, unitXP: 2, unitGold: 0.1, baseQP: 1, tags: ['HEALTH'] },
+    { template: "Walk {n}00 steps", min: 10, max: 50, unitXP: 1, unitGold: 0.1, baseQP: 1, tags: ['FITNESS'] },
+    { template: "Write {n}00 words", min: 2, max: 10, unitXP: 4, unitGold: 0.5, baseQP: 2, tags: ['CREATIVITY'] },
+    { template: "Stretch for {n} minutes", min: 5, max: 15, unitXP: 3, unitGold: 0.2, baseQP: 1, tags: ['HEALTH'] },
 ];
 
 export const DEFAULT_EVENT_TEMPLATES: Omit<EventTemplate, 'id'>[] = [
@@ -188,33 +194,6 @@ export const DEFAULT_EVENT_TEMPLATES: Omit<EventTemplate, 'id'>[] = [
         xpReward: 100,
         goldReward: 0,
         qpReward: 5
-    },
-    {
-        title: "Merchant Caravan",
-        description: "A travelling merchant offers goods. High gold rewards.",
-        allowedDays: [1, 3, 5], // Mon, Wed, Fri
-        spawnChance: 0.2,
-        xpReward: 20,
-        goldReward: 50,
-        qpReward: 2
-    },
-    {
-        title: "Sudden Storm",
-        description: "Stay inside and focus. High XP for indoor tasks.",
-        allowedDays: [0, 1, 2, 3, 4, 5, 6],
-        spawnChance: 0.1,
-        xpReward: 80,
-        goldReward: 10,
-        qpReward: 3
-    },
-    {
-        title: "Community Festival",
-        description: "Join the festivities. Relax and recover.",
-        allowedDays: [5, 6], // Fri, Sat
-        spawnChance: 0.15,
-        xpReward: 30,
-        goldReward: 30,
-        qpReward: 4
     }
 ];
 

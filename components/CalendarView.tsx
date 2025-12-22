@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { useGame } from '../store';
 import { Quest, QuestType } from '../types';
@@ -170,11 +171,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEdit, onToggle }) => {
                         const isSelected = dateStr === selectedDateStr;
 
                         // Connector Logic
-                        // Draw line to the right if:
-                        // 1. Not last column
-                        // 2. Next day exists
-                        // 3. Current day is NOT future (it's a node)
-                        // 4. Next day is NOT future (it's a node)
                         const isColLast = (idx + 1) % 7 === 0;
                         const nextDay = calendarDays[idx + 1];
                         let showConnector = false;
@@ -255,24 +251,38 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEdit, onToggle }) => {
                             // Highlight steps due on this specific day within the card context
                             const stepsDueToday = q.steps?.filter(s => s.dueDate && s.dueDate.startsWith(selectedDateStr));
                             return (
-                                <div key={q.id} className="space-y-2">
-                                    <QuestCard
-                                        quest={q}
-                                        onEdit={q.id.startsWith('virtual') ? undefined : onEdit}
-                                        onToggle={q.id.startsWith('virtual') ? undefined : onToggle}
-                                    />
+                                <QuestCard
+                                    key={q.id}
+                                    quest={q}
+                                    onEdit={q.id.startsWith('virtual') ? undefined : onEdit}
+                                    onToggle={q.id.startsWith('virtual') ? undefined : onToggle}
+                                >
                                     {stepsDueToday && stepsDueToday.length > 0 && (
-                                        <div className="ml-8 space-y-1">
-                                            {stepsDueToday.map(s => (
-                                                <div key={s.id} className="text-[10px] bg-slate-900/50 border border-slate-800 p-1.5 rounded flex items-center gap-2 text-slate-400">
-                                                    <div className={`w-2 h-2 rounded-full ${s.completed ? 'bg-green-500' : 'bg-red-400'}`} />
-                                                    <span className="font-bold uppercase tracking-tight">Milestone Due:</span>
-                                                    <span>{s.title}</span>
-                                                </div>
-                                            ))}
+                                        <div className="pt-2 mt-2 border-t border-white/5">
+                                            {stepsDueToday.map((step, index) => {
+                                                const isLast = index === stepsDueToday.length - 1;
+                                                return (
+                                                    <div key={step.id} className="flex gap-3 relative">
+                                                        {/* Line */}
+                                                        {!isLast && (
+                                                            <div className="absolute left-[7px] top-4 bottom-[-10px] w-[1.5px] bg-slate-700/50" />
+                                                        )}
+                                                        
+                                                        {/* Node */}
+                                                        <div className={`relative z-10 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center border bg-slate-900 ${step.completed ? 'border-amber-500/50' : 'border-slate-700'}`}>
+                                                             <Star size={8} className={step.completed ? "text-amber-400 fill-amber-400" : "text-slate-600 fill-slate-800"} />
+                                                        </div>
+                                                        
+                                                        {/* Content */}
+                                                        <div className="pb-3 text-xs text-slate-400 font-medium">
+                                                            {step.title}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     )}
-                                </div>
+                                </QuestCard>
                             )
                         })}
                     </div>

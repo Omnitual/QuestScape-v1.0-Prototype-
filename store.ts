@@ -1,4 +1,5 @@
 
+
 import React, { useReducer, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Quest, QuestType, GameState, DifficultyModifier, TITLES, DEFAULT_SIDE_QUEST_TEMPLATES, DEFAULT_EVENT_TEMPLATES, SideQuestTemplate, EventTemplate, GameSettings } from './types';
 import { 
@@ -44,7 +45,7 @@ const getInitialState = (): GameState => {
         sideQuestRiskChance: 0.15
     };
     
-    // Auto-fill first quest
+    // Auto-fill first daily quest
     const firstQuest: Quest = {
         id: `dq-init-${Date.now()}`,
         title: 'Complete my first daily task',
@@ -57,6 +58,39 @@ const getInitialState = (): GameState => {
         streak: 0,
         difficulty: 'MEDIUM',
         hasPenalty: true
+    };
+
+    // --- Hero's Journey Setup ---
+    const today = new Date();
+    
+    const day2 = new Date(today);
+    day2.setDate(today.getDate() + 1);
+    
+    const day3 = new Date(today);
+    day3.setDate(today.getDate() + 2);
+    
+    const day4 = new Date(today);
+    day4.setDate(today.getDate() + 3);
+
+    const onboardingHeroQuest: Quest = {
+        id: `hq-awakening-${Date.now()}`,
+        title: 'The Path of Awakening',
+        description: 'Learn the ways of the system to become a true adventurer.',
+        type: QuestType.GRANDMASTER,
+        completed: false,
+        xpReward: 500,
+        goldReward: 100,
+        qpReward: 25,
+        createdAt: Date.now(),
+        dueDate: day4.toISOString(),
+        difficulty: 'EASY',
+        progress: 0,
+        steps: [
+            { id: 's1', title: 'Accept & Complete a Side Quest', completed: false, dueDate: today.toISOString() },
+            { id: 's2', title: 'Create a Custom Side Quest', completed: false, dueDate: day2.toISOString() },
+            { id: 's3', title: 'View Lifetime Stats', completed: false, dueDate: day3.toISOString() },
+            { id: 's4', title: 'Attend a World Event', completed: false, dueDate: day4.toISOString() }
+        ]
     };
 
     return {
@@ -87,7 +121,7 @@ const getInitialState = (): GameState => {
             history: {}
         },
         settings,
-        quests: [firstQuest],
+        quests: [onboardingHeroQuest, firstQuest],
         archivedQuests: [],
         availableSideQuests: generateDynamicSideQuests(sideQuestTemplates, settings),
         sideQuestsChosenCount: 0,
@@ -144,6 +178,34 @@ const gameReducer = (state: GameState, action: Action): GameState => {
 
         case 'COMPLETE_ONBOARDING': {
             const { name, wakeUpTime, xpModifier, firstQuest } = action.payload;
+            
+            // Re-generate the hero quest with new dates/ids based on onboarding time
+            const today = new Date();
+            const day2 = new Date(today); day2.setDate(today.getDate() + 1);
+            const day3 = new Date(today); day3.setDate(today.getDate() + 2);
+            const day4 = new Date(today); day4.setDate(today.getDate() + 3);
+
+            const heroQuest: Quest = {
+                id: `hq-awakening-${Date.now()}`,
+                title: 'The Path of Awakening',
+                description: 'Learn the ways of the system to become a true adventurer.',
+                type: QuestType.GRANDMASTER,
+                completed: false,
+                xpReward: 500,
+                goldReward: 100,
+                qpReward: 25,
+                createdAt: Date.now(),
+                dueDate: day4.toISOString(),
+                difficulty: 'EASY',
+                progress: 0,
+                steps: [
+                    { id: 's1', title: 'Accept & Complete a Side Quest', completed: false, dueDate: today.toISOString() },
+                    { id: 's2', title: 'Create a Custom Side Quest', completed: false, dueDate: day2.toISOString() },
+                    { id: 's3', title: 'View Lifetime Stats', completed: false, dueDate: day3.toISOString() },
+                    { id: 's4', title: 'Attend a World Event', completed: false, dueDate: day4.toISOString() }
+                ]
+            };
+
             const initialQuest: Quest = {
                 id: `dq-${Date.now()}`,
                 title: firstQuest,
@@ -162,7 +224,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 ...state,
                 hasOnboarded: true,
                 stats: { ...state.stats, name, wakeUpTime, xpModifier },
-                quests: [initialQuest],
+                quests: [heroQuest, initialQuest],
                 availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings),
                 lastSideQuestGenDate: new Date().toDateString(),
                 activityLog: [...state.activityLog, log],

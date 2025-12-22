@@ -5,7 +5,7 @@ import { useToast } from './ToastContext'; // Only kept for custom messages if n
 import { QuestType, Quest } from '../types';
 import QuestCard from './QuestCard';
 import { QuestModal } from './QuestModal';
-import { Plus, Clock, Flame, Coins, Zap, Sparkles, Star, RefreshCw, Trophy, CheckCircle2, Lock, Flag, Settings, Hourglass } from 'lucide-react';
+import { Plus, Clock, Flame, Coins, Zap, Sparkles, Star, RefreshCw, Trophy, CheckCircle2, Lock, Flag, Settings, Hourglass, Dices, Scroll, Repeat, Sword } from 'lucide-react';
 
 interface DashboardProps {
     onDelete: (id: string) => void;
@@ -72,31 +72,38 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
     const toggleStep = (questId: string, stepId: string) => {
         const q = state.quests.find(x => x.id === questId);
-        const step = q?.steps?.find(s => s.id === stepId);
+        if (!q || !q.steps) return;
+        
+        const stepIndex = q.steps.findIndex(s => s.id === stepId);
+        const step = q.steps[stepIndex];
         if (!step) return;
 
         // Visual feedback immediate
         if (!step.completed) {
             setCompletingStepId(stepId);
-            setTimeout(() => setCompletingStepId(null), 500); // Reset after animation
-            // NOTE: Step completion doesn't trigger a main toast usually, just local feedback
-            // or we could add it to event queue if we want robust undo for steps. 
-            // For now, simple toast is fine for minor actions.
+            setTimeout(() => setCompletingStepId(null), 500); 
             showToast(`Milestone Reached: ${step.title}`, undefined, 'success');
+
+            // Check if this is the last step
+            const isLastStep = stepIndex === q.steps.length - 1;
+
+            if (isLastStep) {
+                 // Trigger Grande Animation
+                setCelebratingQuestId(questId);
+                
+                // Toggle step first
+                dispatch({ type: 'TOGGLE_QUEST_STEP', payload: { questId, stepId } });
+
+                // Delay actual quest completion to let animation play
+                setTimeout(() => {
+                    dispatch({ type: 'TOGGLE_QUEST', payload: questId });
+                    setTimeout(() => setCelebratingQuestId(null), 1000); 
+                }, 1200);
+                return;
+            }
         }
 
         dispatch({ type: 'TOGGLE_QUEST_STEP', payload: { questId, stepId } });
-    };
-
-    const handleHeroQuestToggle = (questId: string) => {
-        // Trigger Grande Animation
-        setCelebratingQuestId(questId);
-        
-        // Delay actual state change slightly to let animation play
-        setTimeout(() => {
-            onToggle(questId);
-            setTimeout(() => setCelebratingQuestId(null), 1000); 
-        }, 1200);
     };
 
     const handleAcceptSideQuest = (quest: Quest) => {
@@ -198,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                         const steps = q.steps || [];
                         
                         const visualNodes = [
-                            { id: 'start', type: 'START', title: 'Start', date: q.createdAt, completed: true, locked: false },
+                            { id: 'start', type: 'START', title: 'Start', date: q.createdAt, completed: true, locked: false, isLast: false },
                             ...steps.map((s, i) => {
                                 const prevStep = i > 0 ? steps[i-1] : null;
                                 const locked = prevStep ? !prevStep.completed : false;
@@ -206,17 +213,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                     ...s,
                                     type: 'STEP',
                                     date: s.dueDate ? new Date(s.dueDate).getTime() : undefined,
-                                    locked
+                                    locked,
+                                    isLast: i === steps.length - 1
                                 };
-                            }),
-                            { 
-                                id: 'end', 
-                                type: 'END', 
-                                title: 'Victory', 
-                                date: q.dueDate ? new Date(q.dueDate).getTime() : undefined, 
-                                completed: q.completed || isCelebrating,
-                                locked: steps.some(s => !s.completed)
-                            }
+                            })
                         ];
 
                         return (
@@ -236,11 +236,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                         const nextNode = visualNodes[idx + 1];
                                         const isNextCompleted = nextNode?.completed;
                                         const isCurrent = !node.completed && (idx === 0 || visualNodes[idx - 1].completed);
-                                        const canInteract = !node.locked && (node.type === 'STEP' || node.type === 'END');
+                                        const canInteract = !node.locked && node.type === 'STEP';
                                         const isJustCompleted = completingStepId === node.id;
 
-                                        // Label Visibility Logic: Start, End, and Current only
-                                        const showLabel = node.type === 'START' || node.type === 'END' || isCurrent;
+                                        // Label Visibility: Start, Current, or Last Step
+                                        const showLabel = node.type === 'START' || node.isLast || isCurrent;
 
                                         return (
                                             <React.Fragment key={node.id}>
@@ -248,8 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                     className={`relative z-10 flex flex-col items-center group ${canInteract ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'}`}
                                                     onClick={() => {
                                                         if (!canInteract) return;
-                                                        if (node.type === 'STEP') toggleStep(q.id, node.id);
-                                                        if (node.type === 'END') handleHeroQuestToggle(q.id);
+                                                        toggleStep(q.id, node.id);
                                                     }}
                                                 >
                                                     {/* Tooltip on Hover */}
@@ -273,8 +272,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                         className={`
                                                 transition-all duration-300 flex items-center justify-center rounded-full border-2 relative z-10
                                                 ${node.type === 'START' ? 'w-3 h-3 bg-amber-900 border-amber-700' : ''}
-                                                ${node.type === 'STEP' ? 'w-5 h-5' : ''}
-                                                ${node.type === 'END' ? 'w-8 h-8' : ''}
+                                                ${node.type === 'STEP' ? (node.isLast ? 'w-7 h-7' : 'w-5 h-5') : ''}
                                                 ${node.completed
                                                                 ? 'bg-amber-500 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
                                                                 : node.locked 
@@ -288,16 +286,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                     >
                                                         {node.locked && !node.completed && <Lock size={10} className="text-slate-600" />}
                                                         
-                                                        {node.completed && node.type !== 'START' && <CheckCircle2 size={node.type === 'END' ? 16 : 12} className="text-black" strokeWidth={4} />}
+                                                        {node.completed && node.type !== 'START' && <CheckCircle2 size={node.isLast ? 16 : 12} className="text-black" strokeWidth={4} />}
                                                         
-                                                        {!node.completed && !node.locked && node.type === 'END' && <Flag size={14} className={isCurrent ? "text-amber-400" : "text-gray-600"} fill="currentColor" />}
+                                                        {!node.completed && !node.locked && node.isLast && <Flag size={14} className={isCurrent ? "text-amber-400" : "text-gray-600"} fill="currentColor" />}
                                                     </div>
 
                                                     <div className={`
                                             absolute top-full mt-3 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap px-2 py-1 rounded transition-all pointer-events-none
                                             ${showLabel ? 'opacity-100' : 'opacity-0'}
                                             ${isCurrent ? 'text-amber-400 bg-amber-950/90 -translate-y-1 shadow-lg border border-amber-900/50' : node.completed ? 'text-gray-500' : 'text-gray-700'}
-                                            ${node.type === 'END' ? 'text-amber-200' : ''}
+                                            ${node.isLast ? 'text-amber-200' : ''}
                                         `}>
                                                         {node.title}
                                                     </div>
@@ -428,19 +426,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                 {/* Notice Board */}
                 <div className="col-span-1 lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/50">
-                        <h2 className="text-sm font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
-                            <span>Notice Board</span>
-                            <span className="text-[10px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full border border-slate-700">
-                                Re-rolls: {rerollsLeft}/2
-                            </span>
+                        <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+                            Notice Board
                         </h2>
 
-                        <div className="flex gap-4 text-[10px] uppercase font-bold text-slate-500">
-                            <div className={`flex items-center gap-1 ${isDailyAcceptLimitReached ? 'text-red-400' : ''}`}>
-                                Limit: {(state.stats.dailySideQuestsTaken || 0)}/2 Today
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5 text-slate-500 opacity-80" title="Re-rolls Available">
+                                <Dices size={14} />
+                                <span className="text-xs font-mono font-bold">{rerollsLeft}/2</span>
                             </div>
-                            <div className={`flex items-center gap-1 ${isSideQuestActiveLimitReached ? 'text-red-400' : ''}`}>
-                                Capacity: {activeSideQuestsCount}/5 Active
+
+                            <div className={`flex items-center gap-1.5 text-[10px] uppercase font-bold ${isDailyAcceptLimitReached ? 'text-red-400' : 'text-slate-500'}`} title="Daily Acceptance Limit">
+                                <Scroll size={14} />
+                                <span className="font-mono text-xs">{(state.stats.dailySideQuestsTaken || 0)}/2</span>
                             </div>
                         </div>
                     </div>
@@ -524,7 +522,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <section>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                        <h2 className="text-xl font-bold text-indigo-400 font-cinzel tracking-wide">Daily Quests</h2>
+                        <h2 className="text-xl font-bold text-indigo-400 font-cinzel tracking-wide flex items-center gap-2">
+                            <Repeat size={20} /> Daily Quests
+                        </h2>
                         <button onClick={() => setIsAdding(QuestType.DAILY)} className="text-slate-500 hover:text-indigo-400 transition">
                             <Plus size={20} />
                         </button>
@@ -537,7 +537,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
                 <section>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                        <h2 className="text-xl font-bold text-emerald-400 font-cinzel tracking-wide">Side Quests</h2>
+                        <h2 className="text-xl font-bold text-emerald-400 font-cinzel tracking-wide flex items-center gap-2">
+                            <Sword size={20} /> Side Quests
+                        </h2>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 font-bold">{activeSideQuestsCount}/5</span>
                             <button onClick={() => setIsAdding(QuestType.SIDE)} className="text-slate-500 hover:text-emerald-400 transition">

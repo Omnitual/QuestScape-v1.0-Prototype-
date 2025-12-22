@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Quest, QuestType, QuestDifficulty } from '../types';
-import { Check, Repeat, Star, Sword, Clock, AlertTriangle, XCircle, Sparkles, Zap, Coins, Play, Pause, Hourglass } from 'lucide-react';
+import { Check, Repeat, Star, Sword, Clock, AlertTriangle, XCircle, Sparkles, Zap, Coins, Play, Pause, Hourglass, Compass } from 'lucide-react';
 import { useGame } from '../store';
 
 // --- Decoupled Tag Component for Scale & Consistency ---
@@ -124,6 +124,19 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
         }
     };
 
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        // Focus Logic: Toggle Timer if active
+        if (isFocus && timeLeft > 0 && !quest.completed) {
+            toggleTimer(e);
+            return;
+        }
+        
+        // Default Logic: Complete/Uncomplete
+        handleToggle(e);
+    };
+
     // Card Colors (Backgrounds/Borders)
     const getTypeColorStyles = (type: QuestType) => {
         if (isExpired) return 'border-red-900/50 bg-red-950/10';
@@ -138,8 +151,8 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
         }
     };
 
-    // Icon Box Colors (For the left-side icon in standard view)
-    const getTypeIconBoxStyles = (type: QuestType) => {
+    // Colors for the Type Tag
+    const getTypeTagStyles = (type: QuestType) => {
         if (isExpired) return 'bg-red-900/20 border-red-800 text-red-500';
         switch (type) {
             case QuestType.GRANDMASTER: return 'bg-amber-900/30 border-amber-500/50 text-amber-400';
@@ -151,13 +164,14 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
         }
     };
 
-    const getTypeIcon = (type: QuestType) => {
+    const getQuestIconComponent = (type: QuestType) => {
         switch (type) {
-            case QuestType.GRANDMASTER: return <Star size={14} fill="currentColor" className="opacity-80" />;
-            case QuestType.DAILY: return <Repeat size={14} />;
-            case QuestType.SIDE: return <Sword size={14} />;
-            case QuestType.EVENT: return <Sparkles size={14} />;
-            case QuestType.FOCUS: return <Hourglass size={14} />;
+            case QuestType.GRANDMASTER: return Star;
+            case QuestType.DAILY: return Repeat;
+            case QuestType.SIDE: return Sword;
+            case QuestType.EVENT: return Sparkles;
+            case QuestType.FOCUS: return Hourglass;
+            default: return Star;
         }
     };
 
@@ -236,14 +250,20 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                 <div className="mt-auto flex flex-wrap gap-2 items-end">
                     <QuestTag 
                         icon={Zap} 
-                        label={`${quest.xpReward} XP`} 
+                        label={`${quest.xpReward}`} 
                         colorClasses="bg-purple-900/20 border-purple-800 text-purple-400" 
                     />
                     
                     <QuestTag 
                         icon={Coins} 
-                        label={`${quest.goldReward}g`} 
+                        label={`${quest.goldReward}`} 
                         colorClasses="bg-yellow-900/20 border-yellow-800 text-yellow-500" 
+                    />
+
+                    <QuestTag 
+                        icon={Compass} 
+                        label={`${quest.qpReward}`} 
+                        colorClasses="bg-blue-900/20 border-blue-800 text-blue-400" 
                     />
                     
                     {(quest.hasPenalty || quest.isRisk) && (
@@ -262,6 +282,71 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
     // --- 2. Standard Horizontal Row View ---
     const dateStatus = getDaysRemainingShort(quest.dueDate);
     
+    // Dynamic Styles for the Combined Action Button
+    const getActionBtnStyles = () => {
+        let styles = "h-8 min-w-[2rem] px-2 rounded-md border flex items-center justify-center transition-all duration-200 shadow-sm shrink-0 ";
+        
+        // Completed State
+        if (quest.completed || isAnimatingSuccess) {
+            return styles + "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(22,163,74,0.6)]";
+        }
+        
+        // Focus Active/Paused State
+        if (isFocus) {
+            if (timeLeft > 0) {
+                return styles + (isRunning 
+                   ? "bg-cyan-900/80 border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.4)]" 
+                   : "bg-gray-800 border-gray-600 text-gray-400 hover:border-cyan-500 hover:text-cyan-300");
+            } else {
+                // Focus Ready to Complete
+                return styles + "bg-cyan-600 border-cyan-500 text-white animate-bounce shadow-[0_0_10px_rgba(8,145,178,0.6)] hover:bg-cyan-500";
+            }
+        }
+
+        // Expired State
+        if (isExpired) {
+            return styles + "bg-red-900/20 border-red-800 hover:border-red-500 hover:bg-red-900/40 text-red-500/50";
+        }
+        
+        // Late Warning
+        if (dateStatus && dateStatus.isLate) {
+            return styles + "bg-gray-900/50 border-red-500/50 text-red-400 hover:bg-red-900/20";
+        }
+
+        // Default Incomplete
+        return styles + "bg-gray-900/50 border-gray-600 hover:border-gray-400 hover:bg-gray-800 text-gray-400";
+    };
+
+    // Content for the Combined Action Button
+    const getActionBtnContent = () => {
+        if (quest.completed || isAnimatingSuccess) {
+            return <Check size={16} strokeWidth={4} />;
+        }
+        
+        if (isFocus) {
+             if (timeLeft > 0) {
+                 return (
+                    <span className={`font-mono text-xs font-bold ${isRunning ? 'animate-pulse' : ''}`}>
+                        {formatTime(timeLeft)}
+                    </span>
+                 );
+             } else {
+                 return <Check size={16} strokeWidth={3} />; // Ready to complete
+             }
+        }
+
+        if (isExpired) {
+            return <XCircle size={16} />;
+        }
+
+        if (dateStatus) {
+            return <span className="text-[10px] font-bold uppercase tracking-tighter leading-none">{dateStatus.text}</span>;
+        }
+
+        // Default empty state (looks like a checkbox)
+        return null;
+    };
+
     return (
         <div
             onClick={handleCardClick}
@@ -280,20 +365,10 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                 />
             )}
 
-            {/* Left Column: Type Icon (Aligned Top) */}
-            <div className={`relative z-10 hidden sm:flex shrink-0 w-7 h-7 rounded-md border items-center justify-center shadow-inner mt-[3px] ${getTypeIconBoxStyles(quest.type)}`}>
-                {getTypeIcon(quest.type)}
-            </div>
-
             {/* Content Section */}
-            <div className="flex-1 min-w-0 relative z-10 pt-0.5">
+            <div className="flex-1 min-w-0 relative z-10">
                 <div className="flex flex-col gap-0.5 w-full">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        {/* Mobile Only: Inline Type Icon */}
-                        <div className={`sm:hidden p-1 rounded border mr-1 ${getTypeIconBoxStyles(quest.type)}`}>
-                             {getTypeIcon(quest.type)}
-                        </div>
-
                         <h3 className={`text-base sm:text-lg font-bold leading-tight ${quest.completed && !isAnimatingSuccess ? 'text-gray-500 line-through' : isExpired ? 'text-red-300/80' : 'text-gray-200'}`}>
                             {quest.title}
                         </h3>
@@ -306,19 +381,33 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                 </div>
 
                 {/* Footer / Tags */}
-                <div className="flex flex-wrap gap-2 mt-2.5 items-center">
+                <div className="flex flex-wrap gap-2 mt-2 items-center">
+                    
+                    {/* Quest Type Tag (Icon Only) */}
+                    <QuestTag 
+                        icon={getQuestIconComponent(quest.type)} 
+                        colorClasses={getTypeTagStyles(quest.type)} 
+                        title={quest.type}
+                    />
+
                     {(!quest.completed || isAnimatingSuccess) && (
                         <>
                             <QuestTag 
                                 icon={Zap} 
-                                label={`${quest.xpReward} XP`} 
+                                label={`${quest.xpReward}`} 
                                 colorClasses="bg-purple-900/20 border-purple-800 text-purple-400" 
                             />
                             
                             <QuestTag 
                                 icon={Coins} 
-                                label={`${quest.goldReward}g`} 
+                                label={`${quest.goldReward}`} 
                                 colorClasses="bg-yellow-900/20 border-yellow-800 text-yellow-500" 
+                            />
+
+                            <QuestTag 
+                                icon={Compass} 
+                                label={`${quest.qpReward}`} 
+                                colorClasses="bg-blue-900/20 border-blue-800 text-blue-400" 
                             />
                         </>
                     )}
@@ -326,81 +415,34 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                     {(quest.hasPenalty || quest.isRisk) && (!quest.completed || isAnimatingSuccess) && !isExpired && (
                          <QuestTag 
                              icon={AlertTriangle} 
-                             label={<span className="hidden sm:inline">Fail Risk</span>}
+                             label={<span className="hidden sm:inline">Risk</span>}
                              colorClasses="bg-red-900/20 border-red-800 text-red-400"
                              title="Failure results in debuff"
                          />
                     )}
                 </div>
-            </div>
 
-            {/* Action Section (Timing + Button) */}
-            <div className="shrink-0 ml-2 relative z-10 flex flex-col items-end gap-1.5 mt-0.5">
-                
-                {/* Unified Timing Slot: Displays Due Date, Focus Timer, or Grey Clock Placeholder with "NA" */}
-                {!quest.completed && (
-                    <div className="flex items-center justify-end min-h-[14px] w-full">
-                        {isFocus ? (
-                            <div className={`flex items-center gap-1 font-mono text-[11px] font-bold ${isRunning ? 'text-cyan-300' : 'text-gray-500'}`}>
-                                <Hourglass size={10} /> {formatTime(timeLeft)}
-                            </div>
-                        ) : dateStatus ? (
-                            <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-tight ${dateStatus.isLate ? 'text-red-400' : 'text-gray-400'}`}>
-                                <Clock size={10} /> {dateStatus.text}
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-700 opacity-60">
-                                <Clock size={10} /> NA
-                            </div>
-                        )}
+                {/* Injected Content (Milestones, etc.) */}
+                {children && (
+                    <div className="mt-3 w-full animate-fade-in">
+                        {children}
                     </div>
                 )}
-                
-                {/* Action Button */}
-                {isFocus && !quest.completed ? (
-                    <div className="flex items-center">
-                        {timeLeft > 0 ? (
-                            <button
-                                onClick={toggleTimer}
-                                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isRunning ? 'bg-cyan-900/50 border-cyan-500 text-cyan-300 animate-pulse' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-cyan-500 hover:text-cyan-300'}`}
-                            >
-                                {isRunning ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleToggle}
-                                className="w-8 h-8 rounded-full border border-cyan-500 bg-cyan-600 text-white flex items-center justify-center shadow-[0_0_10px_rgba(8,145,178,0.6)] hover:bg-cyan-500 transition-all animate-bounce"
-                            >
-                                <Check size={16} strokeWidth={3} />
-                            </button>
-                        )}
-                    </div>
-                ) : isInteractive ? (
+            </div>
+
+            {/* Action Section - Unified Button */}
+            <div className="shrink-0 ml-auto pl-2 relative z-10 flex flex-col items-end">
+                {isInteractive ? (
                     <button
-                        onClick={handleToggle}
+                        onClick={handleActionClick}
                         disabled={isAnimatingSuccess} // Prevent double clicking during animation
-                        className={`w-8 h-8 rounded-md border flex items-center justify-center transition-all duration-200 
-                ${(quest.completed || isAnimatingSuccess)
-                                ? 'bg-green-600 border-green-600 text-white shadow-[0_0_10px_rgba(22,163,74,0.6)]'
-                                : isExpired
-                                    ? 'bg-red-900/20 border-red-800 hover:border-red-500 hover:bg-red-900/40 text-red-500/50'
-                                    : 'bg-gray-900/50 border-gray-500 hover:border-gray-300 hover:bg-gray-800'
-                            }`}
+                        className={getActionBtnStyles()}
                     >
-                        {(quest.completed || isAnimatingSuccess) && <Check size={16} strokeWidth={4} />}
-                        {!quest.completed && !isAnimatingSuccess && isExpired && <XCircle size={16} />}
+                        {getActionBtnContent()}
                     </button>
                 ) : (
-                    <div className={`w-6 h-6 flex items-center justify-center rounded border
-                 ${quest.completed
-                            ? 'bg-green-900/20 border-green-800 text-green-500'
-                            : isExpired
-                                ? 'bg-red-900/20 border-red-800 text-red-500'
-                                : 'bg-gray-800 border-gray-700'
-                        }
-             `}>
-                        {quest.completed && <Check size={14} />}
-                        {isExpired && !quest.completed && <XCircle size={14} />}
+                    <div className={getActionBtnStyles().replace('hover:border-gray-400 hover:bg-gray-800', '')}>
+                        {getActionBtnContent()}
                     </div>
                 )}
             </div>
