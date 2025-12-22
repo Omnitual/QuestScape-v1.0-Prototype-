@@ -324,22 +324,76 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
                 {/* Stats Stack */}
                 <div className="flex flex-col gap-4 col-span-1">
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-lg">
-                        <div>
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Momentum</h3>
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-950/30 rounded-lg text-orange-500 border border-orange-900/30">
-                                    <Flame size={20} />
+                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-lg relative overflow-hidden min-h-[140px]">
+                        {/* Background Flame Effect */}
+                        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                            <Flame size={100} />
+                        </div>
+
+                        {/* Header Row: Momentum Title, Streak, and Condensed Quests Done */}
+                        <div className="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Momentum</h3>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-orange-950/30 rounded-lg text-orange-500 border border-orange-900/30 shadow-inner">
+                                        <Flame size={20} fill="currentColor" className="animate-pulse" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold text-white leading-none">{state.stats.globalStreak} Days</div>
+                                        <div className="text-[10px] text-orange-500/60 font-bold uppercase mt-1">Active Streak</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-xl font-bold text-white leading-none">{state.stats.globalStreak} Days</div>
-                                    <div className="text-[10px] text-orange-500/60 font-bold uppercase mt-1">Active Streak</div>
+                            </div>
+
+                            <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1">Quests Done</span>
+                                <div className="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 font-mono text-sm text-white shadow-sm">
+                                    {state.stats.dailyQuestsCompleted}
                                 </div>
                             </div>
                         </div>
-                        <div className="mt-4 flex items-center justify-between bg-slate-800/50 p-2 rounded border border-slate-700/50">
-                            <span className="text-[10px] text-slate-400 uppercase font-bold">Quests Done</span>
-                            <span className="text-sm font-mono text-white">{state.stats.dailyQuestsCompleted}</span>
+
+                        {/* 7-Step Node Tracker */}
+                        <div className="relative z-10 pt-2">
+                             <div className="relative px-1.5">
+                                {/* Track Background */}
+                                <div className="absolute top-[5px] left-0 right-0 h-0.5 bg-slate-800 rounded-full" />
+                                
+                                {/* Track Progress */}
+                                <div 
+                                    className="absolute top-[5px] left-0 h-0.5 bg-gradient-to-r from-orange-900 to-orange-500 rounded-full transition-all duration-700 ease-out"
+                                    style={{ width: `${Math.min(100, (Math.max(0, Math.min(state.stats.globalStreak, 7) - 1)) / 6 * 100)}%` }}
+                                />
+
+                                <div className="flex justify-between relative">
+                                    {Array.from({ length: 7 }).map((_, i) => {
+                                        const dayNum = i + 1;
+                                        // Cap streak visual at 7
+                                        const cappedStreak = Math.min(state.stats.globalStreak, 7);
+                                        const isCompleted = state.stats.globalStreak >= dayNum;
+                                        const isCurrent = cappedStreak === dayNum; 
+
+                                        return (
+                                            <div key={i} className="flex flex-col items-center">
+                                                <div className={`
+                                                    w-3 h-3 rounded-full border-2 transition-all duration-500 relative z-10
+                                                    ${isCompleted 
+                                                        ? 'bg-orange-500 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' 
+                                                        : 'bg-slate-900 border-slate-700'
+                                                    }
+                                                    ${isCurrent && state.stats.globalStreak > 0 ? 'scale-125 ring-2 ring-orange-500/30' : ''}
+                                                `}>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                             </div>
+                             
+                             <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-600 mt-2 px-0.5">
+                                <span>Day 1</span>
+                                <span>Day 7+</span>
+                             </div>
                         </div>
                     </div>
 

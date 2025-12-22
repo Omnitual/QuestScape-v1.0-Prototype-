@@ -37,47 +37,67 @@ type Action =
     | { type: 'DAILY_RESET' | 'REFRESH_NOTICE_BOARD' | 'TEST_ADD_STREAK' | 'TEST_FAIL_ALL_QUESTS' | 'FULL_RESET' | 'ACKNOWLEDGE_EVENTS' };
 
 // --- Initial State Factory ---
-const getInitialState = (): GameState => ({
-    hasOnboarded: false,
-    stats: {
-        name: '',
-        level: 1,
-        currentXP: 0,
-        gold: 0,
-        questPoints: 0,
-        titles: [TITLES[0]],
-        wakeUpTime: '08:00',
-        xpModifier: DifficultyModifier.NORMAL,
-        lastLoginDate: new Date().toDateString(),
-        idealDays: [0, 1, 2, 3, 4, 5, 6],
-        lifetimeGold: 0,
-        lifetimeXP: 0,
-        totalQuestsCompleted: 0,
-        focusScore: 0,
-        dailyGold: 0,
-        dailyXP: 0,
-        dailyQP: 0,
-        dailyQuestsCompleted: 0,
-        dailyRerolls: 0,
-        dailySideQuestsTaken: 0,
-        globalStreak: 0,
-        completionHistory: {},
-        history: {}
-    },
-    settings: {
+const getInitialState = (): GameState => {
+    const sideQuestTemplates = DEFAULT_SIDE_QUEST_TEMPLATES.map((t, i) => ({ ...t, id: `sqt-${i}` }));
+    const settings: GameSettings = {
         dailyFailPenalty: 0.75,
         sideQuestRiskChance: 0.15
-    },
-    quests: [],
-    archivedQuests: [],
-    availableSideQuests: [],
-    sideQuestsChosenCount: 0,
-    lastSideQuestGenDate: '',
-    sideQuestTemplates: DEFAULT_SIDE_QUEST_TEMPLATES.map((t, i) => ({ ...t, id: `sqt-${i}` })),
-    eventTemplates: DEFAULT_EVENT_TEMPLATES.map((t, i) => ({ ...t, id: `evt-tmpl-${i}` })),
-    activityLog: [],
-    eventQueue: []
-});
+    };
+    
+    // Auto-fill first quest
+    const firstQuest: Quest = {
+        id: `dq-init-${Date.now()}`,
+        title: 'Complete my first daily task',
+        type: QuestType.DAILY,
+        completed: false,
+        xpReward: 50,
+        goldReward: 10,
+        qpReward: 5,
+        createdAt: Date.now(),
+        streak: 0,
+        difficulty: 'MEDIUM',
+        hasPenalty: true
+    };
+
+    return {
+        hasOnboarded: true, // Disabling onboarding
+        stats: {
+            name: 'Adventurer', // Auto-filled
+            level: 1,
+            currentXP: 0,
+            gold: 0,
+            questPoints: 0,
+            titles: [TITLES[0]],
+            wakeUpTime: '08:00',
+            xpModifier: DifficultyModifier.NORMAL,
+            lastLoginDate: new Date().toDateString(),
+            idealDays: [0, 1, 2, 3, 4, 5, 6],
+            lifetimeGold: 0,
+            lifetimeXP: 0,
+            totalQuestsCompleted: 0,
+            focusScore: 0,
+            dailyGold: 0,
+            dailyXP: 0,
+            dailyQP: 0,
+            dailyQuestsCompleted: 0,
+            dailyRerolls: 0,
+            dailySideQuestsTaken: 0,
+            globalStreak: 0,
+            completionHistory: {},
+            history: {}
+        },
+        settings,
+        quests: [firstQuest],
+        archivedQuests: [],
+        availableSideQuests: generateDynamicSideQuests(sideQuestTemplates, settings),
+        sideQuestsChosenCount: 0,
+        lastSideQuestGenDate: new Date().toDateString(),
+        sideQuestTemplates,
+        eventTemplates: DEFAULT_EVENT_TEMPLATES.map((t, i) => ({ ...t, id: `evt-tmpl-${i}` })),
+        activityLog: [createLogEntry("AUTO_INIT", "Hero Adventurer initialized.")],
+        eventQueue: [createGameEvent('SYSTEM_MESSAGE', "Welcome to QuestLife. Your journey is ready.")]
+    };
+};
 
 // --- Reducer ---
 const gameReducer = (state: GameState, action: Action): GameState => {
