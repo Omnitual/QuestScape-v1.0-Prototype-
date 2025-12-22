@@ -5,7 +5,7 @@ import { useToast } from './ToastContext'; // Only kept for custom messages if n
 import { QuestType, Quest } from '../types';
 import QuestCard from './QuestCard';
 import { QuestModal } from './QuestModal';
-import { Plus, Clock, Flame, Coins, Zap, Sparkles, Star, RefreshCw, Trophy, CheckCircle2, Lock, Flag, Settings, BrainCircuit } from 'lucide-react';
+import { Plus, Clock, Flame, Coins, Zap, Sparkles, Star, RefreshCw, Trophy, CheckCircle2, Lock, Flag, Settings, Hourglass } from 'lucide-react';
 
 interface DashboardProps {
     onDelete: (id: string) => void;
@@ -23,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
     // Animation State
     const [celebratingQuestId, setCelebratingQuestId] = useState<string | null>(null);
     const [completingStepId, setCompletingStepId] = useState<string | null>(null);
+    const [acceptingQuestId, setAcceptingQuestId] = useState<string | null>(null);
 
     // UI Logic
     const activeSideQuestsCount = state.quests.filter(q => q.type === QuestType.SIDE && !q.completed).length;
@@ -98,6 +99,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
         }, 1200);
     };
 
+    const handleAcceptSideQuest = (quest: Quest) => {
+        if (acceptingQuestId) return; // Prevent multiple clicks
+        setAcceptingQuestId(quest.id);
+        
+        // Wait for animation to finish before updating state
+        setTimeout(() => {
+            dispatch({ type: 'ACCEPT_SIDE_QUEST', payload: quest });
+            setAcceptingQuestId(null);
+        }, 400); // 400ms matches the CSS animation duration
+    };
+
     const handleReroll = (e: React.MouseEvent, quest: Quest) => {
         e.stopPropagation();
         const rerollCost = (quest.isRisk || quest.hasPenalty) ? 30 : 15;
@@ -134,7 +146,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
             )}
 
             {/* 1. Hero's Journey (Top Priority) */}
-            <section className="bg-gradient-to-r from-amber-950/40 to-slate-900 border border-amber-500/20 rounded-2xl p-5 shadow-2xl animate-fade-in relative overflow-hidden min-h-[120px]">
+            <section className="bg-gradient-to-r from-amber-950/40 to-slate-900 border border-amber-500/20 rounded-2xl p-5 shadow-2xl animate-fade-in relative min-h-[120px]">
+                {/* Background decoration in container to prevent overflow clipping of tooltips */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+                    <div className="absolute top-0 right-0 p-12 opacity-5">
+                         <Star size={200} />
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between mb-6 relative z-10">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
@@ -220,6 +239,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                         const canInteract = !node.locked && (node.type === 'STEP' || node.type === 'END');
                                         const isJustCompleted = completingStepId === node.id;
 
+                                        // Label Visibility Logic: Start, End, and Current only
+                                        const showLabel = node.type === 'START' || node.type === 'END' || isCurrent;
+
                                         return (
                                             <React.Fragment key={node.id}>
                                                 <div
@@ -230,6 +252,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                         if (node.type === 'END') handleHeroQuestToggle(q.id);
                                                     }}
                                                 >
+                                                    {/* Tooltip on Hover */}
+                                                    <div className="absolute bottom-full mb-3 bg-gray-950 border border-gray-700 px-3 py-2 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex flex-col items-center">
+                                                        <div className="font-bold text-amber-100 text-xs">{node.title}</div>
+                                                        {node.date && (
+                                                            <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                {node.type === 'START' ? 'Started: ' : 'Due: '} 
+                                                                {new Date(node.date).toLocaleDateString()}
+                                                            </div>
+                                                        )}
+                                                        {/* Tooltip Arrow */}
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-700"></div>
+                                                    </div>
+
                                                     {isJustCompleted && (
                                                          <div className="absolute inset-0 bg-amber-500/50 rounded-full animate-ping z-0" />
                                                     )}
@@ -260,6 +295,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
                                                     <div className={`
                                             absolute top-full mt-3 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap px-2 py-1 rounded transition-all pointer-events-none
+                                            ${showLabel ? 'opacity-100' : 'opacity-0'}
                                             ${isCurrent ? 'text-amber-400 bg-amber-950/90 -translate-y-1 shadow-lg border border-amber-900/50' : node.completed ? 'text-gray-500' : 'text-gray-700'}
                                             ${node.type === 'END' ? 'text-amber-200' : ''}
                                         `}>
@@ -281,10 +317,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                             </div>
                         )
                     })}
-                </div>
-
-                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-                    <Star size={200} />
                 </div>
             </section>
 
@@ -364,34 +396,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                             const rerollCost = (quest.isRisk || quest.hasPenalty) ? 30 : 15;
                             const canReroll = rerollsLeft > 0 && state.stats.gold >= rerollCost;
                             const isDisabled = !canAcceptSideQuest;
+                            const isAccepting = acceptingQuestId === quest.id;
 
                             return (
                                 <div
                                     key={quest.id}
-                                    className={`relative group/card h-full ${isDisabled ? 'opacity-60 grayscale-[0.8] select-none' : ''}`}
+                                    className={`relative group/card h-full ${isDisabled ? 'opacity-60 grayscale-[0.8] select-none' : ''} ${isAccepting ? 'animate-accept-quest pointer-events-none' : ''}`}
                                 >
                                     <QuestCard
                                         quest={quest}
                                         compact
-                                        onSelect={isDisabled ? undefined : () => {
-                                            dispatch({ type: 'ACCEPT_SIDE_QUEST', payload: quest });
-                                            // Toast handled by event
-                                        }}
-                                    />
-
-                                    {!isDisabled && (
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
-                                            <button
-                                                onClick={(e) => handleReroll(e, quest)}
-                                                disabled={!canReroll}
-                                                className={`flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded shadow-lg border ${canReroll ? 'bg-gray-800 hover:bg-gray-700 text-white border-gray-600' : 'bg-gray-900 text-gray-600 border-gray-800 cursor-not-allowed'}`}
-                                                title={canReroll ? "Re-roll this offer" : "Not enough gold or rerolls"}
-                                            >
-                                                <RefreshCw size={10} />
-                                                <span className={canReroll ? "text-yellow-400" : ""}>{rerollCost}g</span>
-                                            </button>
-                                        </div>
-                                    )}
+                                        onSelect={isDisabled || isAccepting ? undefined : () => handleAcceptSideQuest(quest)}
+                                    >
+                                        {/* INJECTED REROLL BUTTON - Now moves with tilt */}
+                                        {!isDisabled && !isAccepting && (
+                                            <div className="absolute top-2 right-2 z-10">
+                                                <button
+                                                    onClick={(e) => handleReroll(e, quest)}
+                                                    disabled={!canReroll}
+                                                    className={`flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded shadow-lg border ${canReroll ? 'bg-gray-800 hover:bg-gray-700 text-white border-gray-600' : 'bg-gray-900 text-gray-600 border-gray-800 cursor-not-allowed'}`}
+                                                    title={canReroll ? "Re-roll this offer" : "Not enough gold or rerolls"}
+                                                >
+                                                    <RefreshCw size={10} />
+                                                    <span className={canReroll ? "text-yellow-400" : ""}>{rerollCost}g</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </QuestCard>
                                 </div>
                             )
                         })}
@@ -419,11 +450,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                 </section>
             )}
 
-            {/* 4. Mind Sanctum Section */}
+            {/* 4. Time Chamber Section */}
             <section className="animate-fade-in">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
                     <h2 className="text-xl font-bold text-cyan-400 font-cinzel tracking-wide flex items-center gap-2">
-                        <BrainCircuit size={20} /> Mind Sanctum
+                        <Hourglass size={20} /> Time Chamber
                     </h2>
                     <button onClick={() => setIsAdding(QuestType.FOCUS)} className="text-slate-500 hover:text-cyan-400 transition">
                         <Plus size={20} />

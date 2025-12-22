@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Quest, QuestType, QuestDifficulty, QuestStep, REWARD_MULTIPLIERS } from '../types';
-import { X, Clock, AlertTriangle, Trash2, ChevronDown, ChevronUp, Star, Sword, Repeat, Trophy, Coins, Zap, Sparkles, Map, Plus, GripVertical, Settings, Lock, BrainCircuit, Flag, ArrowDown } from 'lucide-react';
+import { X, Clock, AlertTriangle, Trash2, ChevronDown, ChevronUp, Star, Sword, Repeat, Trophy, Coins, Zap, Sparkles, Map, Plus, GripVertical, Settings, Lock, Hourglass, Flag, ArrowDown } from 'lucide-react';
 
 interface QuestModalProps {
     type: QuestType;
@@ -201,7 +202,7 @@ export const QuestModal: React.FC<QuestModalProps> = ({ type, initialQuest, onCl
             case QuestType.DAILY: return <Repeat className="text-indigo-400" size={16} />;
             case QuestType.SIDE: return <Sword className="text-emerald-400" size={16} />;
             case QuestType.EVENT: return <Sparkles className="text-purple-400" size={16} />;
-            case QuestType.FOCUS: return <BrainCircuit className="text-cyan-400" size={16} />;
+            case QuestType.FOCUS: return <Hourglass className="text-cyan-400" size={16} />;
             default: return null;
         }
     };
@@ -212,7 +213,7 @@ export const QuestModal: React.FC<QuestModalProps> = ({ type, initialQuest, onCl
             case QuestType.DAILY: return 'Daily Quest';
             case QuestType.SIDE: return 'Side Quest';
             case QuestType.EVENT: return 'World Event';
-            case QuestType.FOCUS: return 'Mind Sanctum';
+            case QuestType.FOCUS: return 'Time Chamber';
             default: return 'Quest';
         }
     };

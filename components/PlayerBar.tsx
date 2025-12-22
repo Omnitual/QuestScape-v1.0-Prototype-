@@ -2,7 +2,7 @@
 import React from 'react';
 import { useGame } from '../store';
 import { getStreakMultiplier } from '../gameMechanics';
-import { Coins, Compass, Flame, BrainCircuit } from 'lucide-react';
+import { Coins, Compass, Flame, Hourglass } from 'lucide-react';
 
 const PlayerBar: React.FC = () => {
     const { state, maxXP } = useGame();
@@ -44,8 +44,8 @@ const PlayerBar: React.FC = () => {
                             <Compass size={18} className="text-blue-400" />
                             <span className="text-sm font-bold text-gray-200">{stats.questPoints}</span>
                         </div>
-                        <div className="flex items-center gap-2" title="Sanctum Duration (Total Minutes)">
-                            <BrainCircuit size={18} className="text-cyan-400" />
+                        <div className="flex items-center gap-2" title="Focus Time (Total)">
+                            <Hourglass size={18} className="text-cyan-400" />
                             <span className="text-sm font-bold text-gray-200">{stats.focusScore || 0}</span>
                         </div>
                     </div>

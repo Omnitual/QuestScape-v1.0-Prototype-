@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -25,7 +26,7 @@
         100% { transform: translateX(-100%); opacity: 0; }
       }
       .animate-plasma {
-        animation: plasma-slide 0.8s ease-out forwards;
+        animation: plasma-slide 0.4s ease-out forwards;
       }
 
       /* Toast Bounce: Slide up and snappy bounce */
@@ -48,6 +49,27 @@
       }
       .animate-toast-mega {
         animation: toast-bounce-mega 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+
+      /* Quest Acceptance Animations */
+      @keyframes slide-left-out {
+        0% { transform: translateX(0); opacity: 1; }
+        100% { transform: translateX(-120%); opacity: 0; }
+      }
+      @keyframes slide-up-out {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-50px) scale(0.95); opacity: 0; }
+      }
+      
+      .animate-accept-quest {
+        animation: slide-left-out 0.4s ease-in forwards;
+      }
+      
+      /* Use MD breakpoint (768px) to switch to slide-up for grid layout */
+      @media (min-width: 768px) {
+        .animate-accept-quest {
+          animation: slide-up-out 0.4s ease-in forwards;
+        }
       }
       
     </style>
