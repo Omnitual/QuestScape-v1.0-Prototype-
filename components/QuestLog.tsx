@@ -1,10 +1,14 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../store';
 import { useToast } from './ToastContext';
 import { Quest, QuestType, QuestDifficulty } from '../types';
 import QuestCard from './QuestCard';
 import CalendarView from './CalendarView';
-import { BookOpen, Archive, Filter, CheckCircle2, XCircle, ChevronDown, ChevronUp, Trash2, RotateCcw, Star, Repeat, Sword, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
+import { QuestModal } from './QuestModal';
+import { MAX_SIDE_QUESTS_ACTIVE } from '../gameMechanics';
+import { BookOpen, Archive, Filter, CheckCircle2, XCircle, ChevronDown, ChevronUp, Trash2, RotateCcw, Star, Repeat, Sword, Sparkles, Calendar as CalendarIcon, Plus } from 'lucide-react';
 
 interface QuestLogProps {
     onEdit: (quest: Quest) => void;
@@ -32,6 +36,44 @@ const QuestLog: React.FC<QuestLogProps> = ({ onEdit, onDelete, onToggle }) => {
     const [filterStatus, setFilterStatus] = useState<('COMPLETED' | 'FAILED')[]>([]); // For History tab
 
     const { archivedQuests } = state;
+
+    // Active Quest Management (Copied/Adapted from Dashboard for Top View)
+    const [isAdding, setIsAdding] = useState<QuestType | null>(null);
+
+    const isQuestActive = (q: Quest) => {
+        if (q.completed) return false;
+        if (q.dueDate && new Date(q.dueDate) < new Date()) return false;
+        return true;
+    };
+
+    const activeDailyQuests = state.quests.filter(q => q.type === QuestType.DAILY && isQuestActive(q));
+    const activeSideQuests = state.quests.filter(q => q.type === QuestType.SIDE && isQuestActive(q));
+    const activeSideQuestsCount = activeSideQuests.length;
+
+    const handleCreateQuest = (questData: Partial<Quest>) => {
+        dispatch({
+            type: 'ADD_QUEST',
+            payload: {
+                id: `q-${Date.now()}`,
+                title: questData.title!,
+                description: questData.description,
+                type: questData.type!,
+                completed: false,
+                xpReward: questData.xpReward || 50,
+                goldReward: questData.goldReward || 10,
+                qpReward: questData.qpReward || 5,
+                createdAt: Date.now(),
+                streak: questData.type === QuestType.DAILY ? 0 : undefined,
+                dueDate: questData.dueDate,
+                difficulty: questData.difficulty,
+                hasPenalty: questData.hasPenalty,
+                progress: questData.progress,
+                steps: questData.steps,
+                focusDurationMinutes: questData.focusDurationMinutes,
+                focusSecondsRemaining: questData.focusSecondsRemaining
+            }
+        });
+    };
 
     // --- Filtering Logic ---
 
@@ -96,13 +138,47 @@ const QuestLog: React.FC<QuestLogProps> = ({ onEdit, onDelete, onToggle }) => {
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6 pb-24 animate-fade-in relative min-h-screen">
 
-            {/* Header & Main Navigation */}
-            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-cinzel text-indigo-400 mb-1">Quest Log</h1>
-                    <p className="text-gray-400 text-sm">Track your active tasks and review your history.</p>
-                </div>
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-cinzel text-indigo-400 mb-1">Quest Log</h1>
+                <p className="text-gray-400 text-sm">Track your active tasks and review your history.</p>
+            </div>
 
+            {/* Top Section: Active Daily & Side Quests */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 animate-fade-in">
+                <section>
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+                        <h2 className="text-xl font-bold text-indigo-400 font-cinzel tracking-wide flex items-center gap-2">
+                            <Repeat size={20} /> Daily Quests
+                        </h2>
+                        <button onClick={() => setIsAdding(QuestType.DAILY)} className="text-slate-500 hover:text-indigo-400 transition">
+                            <Plus size={20} />
+                        </button>
+                    </div>
+                    <div className="space-y-3">
+                        {activeDailyQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">Your schedule is clear.</p>}
+                        {activeDailyQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
+                    </div>
+                </section>
+
+                <section>
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+                        <h2 className="text-xl font-bold text-emerald-400 font-cinzel tracking-wide flex items-center gap-2">
+                            <Sword size={20} /> Side Quests
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-bold">{activeSideQuestsCount}/{MAX_SIDE_QUESTS_ACTIVE}</span>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {activeSideQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">No active side adventures.</p>}
+                        {activeSideQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
+                    </div>
+                </section>
+            </div>
+
+            {/* Main Navigation Tabs */}
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="bg-gray-900 p-1 rounded-lg flex w-full md:w-auto gap-1 border border-gray-800 overflow-x-auto">
                     <button
                         onClick={() => setMainTab('CHRONICLE')}
@@ -318,6 +394,14 @@ const QuestLog: React.FC<QuestLogProps> = ({ onEdit, onDelete, onToggle }) => {
                         )
                     })}
                 </div>
+            )}
+            
+            {isAdding && (
+                <QuestModal
+                    type={isAdding}
+                    onClose={() => setIsAdding(null)}
+                    onSave={handleCreateQuest}
+                />
             )}
         </div>
     );

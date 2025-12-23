@@ -42,9 +42,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
     const heroQuests = state.quests.filter(q => q.type === QuestType.GRANDMASTER && isQuestActive(q));
     const hasActiveHeroQuest = heroQuests.length > 0;
-
-    const dailyQuests = state.quests.filter(q => q.type === QuestType.DAILY && isQuestActive(q));
-    const sideQuests = state.quests.filter(q => q.type === QuestType.SIDE && isQuestActive(q));
+    
     const eventQuests = state.quests.filter(q => q.type === QuestType.EVENT && isQuestActive(q));
     const focusQuests = state.quests.filter(q => q.type === QuestType.FOCUS && isQuestActive(q));
 
@@ -323,110 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
             {/* 2. Daily Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 animate-fade-in">
-                {/* Stats Stack */}
-                <div className="flex flex-col gap-4 lg:col-span-3">
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-lg relative overflow-hidden min-h-[140px]">
-                        {/* Background Flame Effect */}
-                        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                            <Flame size={100} />
-                        </div>
-
-                        {/* Header Row: Momentum Title, Streak, and Condensed Quests Done */}
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div>
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Momentum</h3>
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg border shadow-inner transition-colors duration-500 ${isStreakActive ? 'bg-orange-950/30 text-orange-500 border-orange-900/30' : 'bg-slate-800/50 text-slate-600 border-slate-700/50'}`}>
-                                        <Flame size={20} fill={isStreakActive ? "currentColor" : "none"} className={isStreakActive ? "animate-pulse" : ""} />
-                                    </div>
-                                    <div>
-                                        <div className={`text-xl font-bold leading-none transition-colors ${isStreakActive ? 'text-white' : 'text-slate-500'}`}>{state.stats.globalStreak} Days</div>
-                                        <div className="text-[10px] text-orange-500/60 font-bold uppercase mt-1">Active Streak</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col items-end">
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1">Quests Done</span>
-                                <div className="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 font-mono text-sm text-white shadow-sm">
-                                    {state.stats.dailyQuestsCompleted}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 7-Step Node Tracker */}
-                        <div className="relative z-10 pt-4 px-1">
-                             <div className="relative">
-                                {/* Track Background - Bleeds off edges (parent has p-5 = 20px) */}
-                                <div className="absolute top-1/2 -translate-y-1/2 left-[-24px] right-[-24px] h-0.5 bg-slate-800" />
-                                
-                                {/* Track Progress */}
-                                <div 
-                                    className="absolute top-1/2 -translate-y-1/2 left-0 h-0.5 bg-gradient-to-r from-orange-900 to-orange-500 transition-all duration-700 ease-out"
-                                    style={{ width: `${Math.min(100, (Math.max(0, Math.min(state.stats.globalStreak, 7) - 1)) / 6 * 100)}%` }}
-                                />
-
-                                <div className="flex justify-between relative items-center">
-                                    {Array.from({ length: 7 }).map((_, i) => {
-                                        const dayNum = i + 1;
-                                        const cappedStreak = Math.min(state.stats.globalStreak, 7);
-                                        const isCompleted = state.stats.globalStreak >= dayNum;
-                                        const isCurrent = cappedStreak === dayNum; 
-
-                                        return (
-                                            <div key={i} className="relative z-10 flex items-center justify-center">
-                                                {isCompleted ? (
-                                                     <div className={`
-                                                        w-6 h-6 rounded-full bg-orange-600 border-2 border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.6)] 
-                                                        flex items-center justify-center text-orange-50 transition-all duration-500
-                                                        ${isCurrent && isStreakActive ? 'scale-125 ring-2 ring-orange-500/30' : ''}
-                                                     `}>
-                                                        <Flame size={12} fill="currentColor" />
-                                                     </div>
-                                                ) : (
-                                                     <div className="w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-slate-700" />
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                             </div>
-                             
-                             <div className="flex justify-between text-[9px] font-bold uppercase tracking-wider text-slate-600 mt-3">
-                                <span>Day 1</span>
-                                <span>Day 7+</span>
-                             </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between group relative overflow-hidden shadow-lg">
-                        <div className="absolute -bottom-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
-                            <Coins size={80} />
-                        </div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Today's Loot</h3>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5 text-yellow-500 mb-1">
-                                    <Coins size={14} /> <span className="text-xs font-bold">Gold</span>
-                                </div>
-                                <span className="text-lg font-mono text-white">+{state.stats.dailyGold}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5 text-indigo-400 mb-1">
-                                    <Zap size={14} /> <span className="text-xs font-bold">XP</span>
-                                </div>
-                                <span className="text-lg font-mono text-white">+{state.stats.dailyXP}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5 text-blue-400 mb-1">
-                                    <Trophy size={14} /> <span className="text-xs font-bold">QP</span>
-                                </div>
-                                <span className="text-lg font-mono text-white">+{state.stats.dailyQP}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+                
                 {/* Notice Board (Offers) */}
                 <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/50">
@@ -503,6 +398,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                         )}
                     </div>
                 </div>
+
+                {/* Time Chamber (Right Column) */}
+                <div className="lg:col-span-3 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/50">
+                        <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                            <Hourglass size={16} /> Time Chamber
+                        </h2>
+                        <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-500 font-bold font-mono">{activeFocusQuestsCount}/{MAX_FOCUS_QUESTS_ACTIVE}</span>
+                        </div>
+                    </div>
+                    <div className="space-y-3 flex-1">
+                        {focusQuests.length === 0 && (
+                             <div className="h-full min-h-[150px] flex flex-col items-center justify-center text-slate-600/50">
+                                <Hourglass size={24} className="mb-2" />
+                                <p className="text-xs italic">Chamber empty.</p>
+                            </div>
+                        )}
+                        {focusQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
+                    </div>
+                </div>
             </div>
 
             {/* 3. Global Event Section */}
@@ -517,55 +433,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                     </div>
                 </section>
             )}
-
-            {/* 4. Time Chamber Section - No Manual Add */}
-            <section className="animate-fade-in">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                    <h2 className="text-xl font-bold text-cyan-400 font-cinzel tracking-wide flex items-center gap-2">
-                        <Hourglass size={20} /> Time Chamber
-                    </h2>
-                    <div className="flex items-center gap-2">
-                         <span className="text-xs text-gray-500 font-bold">{activeFocusQuestsCount}/{MAX_FOCUS_QUESTS_ACTIVE}</span>
-                    </div>
-                </div>
-                <div className="space-y-3">
-                    {focusQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">No active chambers. Check the Notice Board.</p>}
-                    {focusQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
-                </div>
-            </section>
-
-            {/* 5. Grid for Daily & Side Quests */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <section>
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                        <h2 className="text-xl font-bold text-indigo-400 font-cinzel tracking-wide flex items-center gap-2">
-                            <Repeat size={20} /> Daily Quests
-                        </h2>
-                        <button onClick={() => setIsAdding(QuestType.DAILY)} className="text-slate-500 hover:text-indigo-400 transition">
-                            <Plus size={20} />
-                        </button>
-                    </div>
-                    <div className="space-y-3">
-                        {dailyQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">Your schedule is clear.</p>}
-                        {dailyQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
-                    </div>
-                </section>
-
-                <section>
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                        <h2 className="text-xl font-bold text-emerald-400 font-cinzel tracking-wide flex items-center gap-2">
-                            <Sword size={20} /> Side Quests
-                        </h2>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 font-bold">{activeSideQuestsCount}/{MAX_SIDE_QUESTS_ACTIVE}</span>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {sideQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">No active side adventures.</p>}
-                        {sideQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
-                    </div>
-                </section>
-            </div>
 
             {isAdding && (
                 <QuestModal
