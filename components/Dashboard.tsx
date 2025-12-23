@@ -30,6 +30,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
     const isSideQuestActiveLimitReached = activeSideQuestsCount >= 5;
     const isDailyAcceptLimitReached = (state.stats.dailySideQuestsTaken || 0) >= 2;
     const canAcceptSideQuest = !isSideQuestActiveLimitReached && !isDailyAcceptLimitReached;
+    const isStreakActive = state.stats.globalStreak > 0;
 
     const isQuestActive = (q: Quest) => {
         if (q.completed) return false;
@@ -319,9 +320,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
             </section>
 
             {/* 2. Daily Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 animate-fade-in">
                 {/* Stats Stack */}
-                <div className="flex flex-col gap-4 col-span-1">
+                <div className="flex flex-col gap-4 lg:col-span-3">
                     <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-lg relative overflow-hidden min-h-[140px]">
                         {/* Background Flame Effect */}
                         <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
@@ -333,11 +334,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                             <div>
                                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Momentum</h3>
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-orange-950/30 rounded-lg text-orange-500 border border-orange-900/30 shadow-inner">
-                                        <Flame size={20} fill="currentColor" className="animate-pulse" />
+                                    <div className={`p-2 rounded-lg border shadow-inner transition-colors duration-500 ${isStreakActive ? 'bg-orange-950/30 text-orange-500 border-orange-900/30' : 'bg-slate-800/50 text-slate-600 border-slate-700/50'}`}>
+                                        <Flame size={20} fill={isStreakActive ? "currentColor" : "none"} className={isStreakActive ? "animate-pulse" : ""} />
                                     </div>
                                     <div>
-                                        <div className="text-xl font-bold text-white leading-none">{state.stats.globalStreak} Days</div>
+                                        <div className={`text-xl font-bold leading-none transition-colors ${isStreakActive ? 'text-white' : 'text-slate-500'}`}>{state.stats.globalStreak} Days</div>
                                         <div className="text-[10px] text-orange-500/60 font-bold uppercase mt-1">Active Streak</div>
                                     </div>
                                 </div>
@@ -352,43 +353,44 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                         </div>
 
                         {/* 7-Step Node Tracker */}
-                        <div className="relative z-10 pt-2">
-                             <div className="relative px-1.5">
-                                {/* Track Background */}
-                                <div className="absolute top-[5px] left-0 right-0 h-0.5 bg-slate-800 rounded-full" />
+                        <div className="relative z-10 pt-4 px-1">
+                             <div className="relative">
+                                {/* Track Background - Bleeds off edges (parent has p-5 = 20px) */}
+                                <div className="absolute top-1/2 -translate-y-1/2 left-[-24px] right-[-24px] h-0.5 bg-slate-800" />
                                 
                                 {/* Track Progress */}
                                 <div 
-                                    className="absolute top-[5px] left-0 h-0.5 bg-gradient-to-r from-orange-900 to-orange-500 rounded-full transition-all duration-700 ease-out"
+                                    className="absolute top-1/2 -translate-y-1/2 left-0 h-0.5 bg-gradient-to-r from-orange-900 to-orange-500 transition-all duration-700 ease-out"
                                     style={{ width: `${Math.min(100, (Math.max(0, Math.min(state.stats.globalStreak, 7) - 1)) / 6 * 100)}%` }}
                                 />
 
-                                <div className="flex justify-between relative">
+                                <div className="flex justify-between relative items-center">
                                     {Array.from({ length: 7 }).map((_, i) => {
                                         const dayNum = i + 1;
-                                        // Cap streak visual at 7
                                         const cappedStreak = Math.min(state.stats.globalStreak, 7);
                                         const isCompleted = state.stats.globalStreak >= dayNum;
                                         const isCurrent = cappedStreak === dayNum; 
 
                                         return (
-                                            <div key={i} className="flex flex-col items-center">
-                                                <div className={`
-                                                    w-3 h-3 rounded-full border-2 transition-all duration-500 relative z-10
-                                                    ${isCompleted 
-                                                        ? 'bg-orange-500 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' 
-                                                        : 'bg-slate-900 border-slate-700'
-                                                    }
-                                                    ${isCurrent && state.stats.globalStreak > 0 ? 'scale-125 ring-2 ring-orange-500/30' : ''}
-                                                `}>
-                                                </div>
+                                            <div key={i} className="relative z-10 flex items-center justify-center">
+                                                {isCompleted ? (
+                                                     <div className={`
+                                                        w-6 h-6 rounded-full bg-orange-600 border-2 border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.6)] 
+                                                        flex items-center justify-center text-orange-50 transition-all duration-500
+                                                        ${isCurrent && isStreakActive ? 'scale-125 ring-2 ring-orange-500/30' : ''}
+                                                     `}>
+                                                        <Flame size={12} fill="currentColor" />
+                                                     </div>
+                                                ) : (
+                                                     <div className="w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-slate-700" />
+                                                )}
                                             </div>
                                         );
                                     })}
                                 </div>
                              </div>
                              
-                             <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-600 mt-2 px-0.5">
+                             <div className="flex justify-between text-[9px] font-bold uppercase tracking-wider text-slate-600 mt-3">
                                 <span>Day 1</span>
                                 <span>Day 7+</span>
                              </div>
@@ -424,7 +426,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                 </div>
 
                 {/* Notice Board */}
-                <div className="col-span-1 lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
+                <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/50">
                         <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
                             Notice Board
@@ -462,7 +464,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                     >
                                         {/* INJECTED REROLL BUTTON - Now moves with tilt */}
                                         {!isDisabled && !isAccepting && (
-                                            <div className="absolute top-2 right-2 z-10">
+                                            <div className="absolute top-5 right-5 z-10">
                                                 <button
                                                     onClick={(e) => handleReroll(e, quest)}
                                                     disabled={!canReroll}

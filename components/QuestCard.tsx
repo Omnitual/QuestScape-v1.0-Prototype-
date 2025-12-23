@@ -221,7 +221,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
             <div
                 onClick={onSelect}
                 className={`
-                    cursor-pointer group/card relative overflow-hidden bg-emerald-950/30 border rounded-lg p-4 flex flex-col h-full border-gray-600 
+                    cursor-pointer group/card relative overflow-hidden bg-emerald-950/30 border rounded-lg p-5 flex flex-col h-full border-gray-600 
                     transition-all duration-300 ease-out origin-bottom-left
                     hover:z-20 hover:scale-[1.05] hover:rotate-2 hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.5)] hover:border-emerald-400 hover:bg-emerald-950/50
                     shadow-sm
@@ -229,7 +229,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
             >
                 {children}
 
-                <div className="flex justify-between items-start mb-2 relative z-0">
+                <div className="flex justify-between items-start mb-3 relative z-0">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
                             Side Quest
@@ -242,9 +242,9 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-start justify-between gap-2 mb-6 flex-1">
                     <h4 className="font-semibold text-gray-200 group-hover/card:text-white leading-tight">{quest.title}</h4>
-                    {getDifficultyDot(quest.difficulty)}
+                    <div className="mt-1.5">{getDifficultyDot(quest.difficulty)}</div>
                 </div>
 
                 <div className="mt-auto flex flex-wrap gap-2 items-end">
@@ -269,7 +269,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                     {(quest.hasPenalty || quest.isRisk) && (
                          <QuestTag 
                              icon={AlertTriangle} 
-                             label={<span className="hidden sm:inline">Risk</span>}
+                             label={null}
                              colorClasses="bg-red-900/20 border-red-800 text-red-400"
                              title="Failure results in debuff"
                          />
@@ -379,6 +379,13 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                         <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-0.5">{quest.description}</p>
                     )}
                 </div>
+                
+                {/* Injected Content (Milestones, etc.) - Moved here for better visual flow below title */}
+                {children && (
+                    <div className="mt-3 mb-2 w-full animate-fade-in relative z-20">
+                        {children}
+                    </div>
+                )}
 
                 {/* Footer / Tags */}
                 <div className="flex flex-wrap gap-2 mt-2 items-center">
@@ -415,19 +422,12 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
                     {(quest.hasPenalty || quest.isRisk) && (!quest.completed || isAnimatingSuccess) && !isExpired && (
                          <QuestTag 
                              icon={AlertTriangle} 
-                             label={<span className="hidden sm:inline">Risk</span>}
+                             label={null}
                              colorClasses="bg-red-900/20 border-red-800 text-red-400"
                              title="Failure results in debuff"
                          />
                     )}
                 </div>
-
-                {/* Injected Content (Milestones, etc.) */}
-                {children && (
-                    <div className="mt-3 w-full animate-fade-in">
-                        {children}
-                    </div>
-                )}
             </div>
 
             {/* Action Section - Unified Button */}
