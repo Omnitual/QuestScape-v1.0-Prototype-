@@ -1,8 +1,5 @@
 
 
-
-
-
 import React, { useReducer, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Quest, QuestType, GameState, DifficultyModifier, TITLES, DEFAULT_SIDE_QUEST_TEMPLATES, DEFAULT_EVENT_TEMPLATES, DEFAULT_FOCUS_TEMPLATES, SideQuestTemplate, EventTemplate, FocusTemplate, GameSettings } from './types';
 import { 
@@ -100,7 +97,7 @@ const getInitialState = (): GameState => {
     };
 
     return {
-        hasOnboarded: true, // Disabling onboarding
+        hasOnboarded: false, // Re-enabled onboarding
         stats: {
             name: 'Adventurer', // Auto-filled
             level: 1,

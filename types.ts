@@ -182,14 +182,10 @@ export const TITLES = [
 export const DEFAULT_SIDE_QUEST_TEMPLATES: Omit<SideQuestTemplate, 'id'>[] = [
     { template: "Do {n} Pushups", min: 5, max: 20, unitXP: 2, unitGold: 0.2, baseQP: 1, tags: ['FITNESS'] },
     { template: "Read {n} pages", min: 2, max: 10, unitXP: 5, unitGold: 1, baseQP: 1, tags: ['MIND'] },
-    { template: "Meditate for {n} minutes", min: 2, max: 10, unitXP: 5, unitGold: 0.5, baseQP: 2, tags: ['MIND'] },
     { template: "Declutter {n} items", min: 1, max: 5, unitXP: 5, unitGold: 1, baseQP: 1, tags: ['ORDER'] },
-    { template: "Focus for {n} minutes", min: 15, max: 45, unitXP: 1, unitGold: 0.2, baseQP: 2, tags: ['FOCUS'] },
-    // New additions
     { template: "Drink {n} glasses of water", min: 1, max: 4, unitXP: 2, unitGold: 0.1, baseQP: 1, tags: ['HEALTH'] },
     { template: "Walk {n}00 steps", min: 10, max: 50, unitXP: 1, unitGold: 0.1, baseQP: 1, tags: ['FITNESS'] },
     { template: "Write {n}00 words", min: 2, max: 10, unitXP: 4, unitGold: 0.5, baseQP: 2, tags: ['CREATIVITY'] },
-    { template: "Stretch for {n} minutes", min: 5, max: 15, unitXP: 3, unitGold: 0.2, baseQP: 1, tags: ['HEALTH'] },
 ];
 
 export const DEFAULT_EVENT_TEMPLATES: Omit<EventTemplate, 'id'>[] = [
@@ -207,7 +203,11 @@ export const DEFAULT_EVENT_TEMPLATES: Omit<EventTemplate, 'id'>[] = [
 export const DEFAULT_FOCUS_TEMPLATES: Omit<FocusTemplate, 'id'>[] = [
     { title: "Pomodoro Session", duration: 25 },
     { title: "Quick Reset", duration: 5 },
-    { title: "Deep Work Block", duration: 60 }
+    { title: "Deep Work Block", duration: 60 },
+    // Translated from Side Quests
+    { title: "Mindfulness", duration: 10 },
+    { title: "Deep Focus", duration: 45 },
+    { title: "Morning Stretch", duration: 15 }
 ];
 
 export const SIDE_QUEST_POOL: string[] = [];

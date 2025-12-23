@@ -252,26 +252,35 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, compact = false, onSelect,
     // --- 1. Compact View (Notice Board Selection) ---
     if (compact) {
         const daysLeft = getDaysRemaining(quest.dueDate);
+        const isFocus = quest.type === QuestType.FOCUS;
+
+        const containerClasses = isFocus 
+            ? "bg-cyan-950/20 border-cyan-900/50 hover:border-cyan-400 hover:bg-cyan-950/40 hover:shadow-[0_20px_25px_-5px_rgba(6,182,212,0.15)] border-gray-600"
+            : "bg-emerald-950/30 border-gray-600 hover:border-emerald-400 hover:bg-emerald-950/50 hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.5)]";
+        
+        const labelClass = isFocus ? "text-cyan-400" : "text-emerald-400";
+        const badgeClass = isFocus ? "text-cyan-500/70 border-cyan-500/20 bg-cyan-950/50" : "text-emerald-500/70 border-emerald-500/20 bg-emerald-950/50";
 
         return (
             <div
                 onClick={onSelect}
                 className={`
-                    cursor-pointer group/card relative overflow-hidden bg-emerald-950/30 border rounded-lg p-5 flex flex-col h-full border-gray-600 
+                    cursor-pointer group/card relative overflow-hidden border rounded-lg p-5 flex flex-col h-full 
                     transition-all duration-300 ease-out origin-bottom-left
-                    hover:z-20 hover:scale-[1.05] hover:rotate-2 hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.5)] hover:border-emerald-400 hover:bg-emerald-950/50
+                    hover:z-20 hover:scale-[1.05] hover:rotate-2 
                     shadow-sm
+                    ${containerClasses}
                 `}
             >
                 {children}
 
                 <div className="flex justify-between items-start mb-3 relative z-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
-                            {quest.type === QuestType.FOCUS ? 'Protocol' : 'Side Quest'}
+                        <span className={`text-xs font-bold uppercase tracking-widest ${labelClass}`}>
+                            {isFocus ? 'Time Chamber' : 'Side Quest'}
                         </span>
                         {daysLeft && (
-                            <span className="text-[10px] text-emerald-500/70 border border-emerald-500/20 px-1.5 rounded bg-emerald-950/50 flex items-center gap-1">
+                            <span className={`text-[10px] px-1.5 rounded flex items-center gap-1 ${badgeClass}`}>
                                 <Clock size={10} /> {daysLeft}d
                             </span>
                         )}

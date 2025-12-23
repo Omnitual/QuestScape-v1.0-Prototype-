@@ -357,7 +357,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                             return (
                                 <div
                                     key={quest.id}
-                                    className={`relative group/card h-full ${isDisabled ? 'opacity-60 grayscale-[0.8] select-none' : ''} ${isAccepting ? 'animate-accept-quest pointer-events-none' : ''}`}
+                                    className={`relative group/card h-full ${isDisabled ? 'opacity-40 grayscale brightness-50 select-none' : ''} ${isAccepting ? 'animate-accept-quest pointer-events-none' : ''}`}
                                 >
                                     <QuestCard
                                         quest={quest}
@@ -376,13 +376,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                     <RefreshCw size={10} />
                                                     <span className={canReroll ? "text-yellow-400" : ""}>{rerollCost}g</span>
                                                 </button>
-                                            </div>
-                                        )}
-                                        {isDisabled && (
-                                            <div className="absolute inset-0 flex items-center justify-center z-50">
-                                                <div className="bg-black/80 text-white text-[10px] uppercase font-bold px-2 py-1 rounded border border-gray-600">
-                                                    Limit Reached
-                                                </div>
                                             </div>
                                         )}
                                     </QuestCard>

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useGame } from '../store';
 import { getStreakMultiplier } from '../gameMechanics';
@@ -8,15 +9,21 @@ const MomentumWidget: React.FC<{ streak: number; multiplier: number }> = ({ stre
     const isStreakActive = streak > 0;
     
     return (
-        <div className="flex items-center gap-3 bg-gray-900/80 border border-gray-700/50 rounded-full px-4 py-1.5 shadow-sm backdrop-blur-md">
-            {/* Count & Icon */}
-            <div className="flex items-center gap-1.5 min-w-[3.5rem]">
-                <Flame size={14} className={`${isStreakActive ? 'text-orange-500 fill-orange-500 animate-pulse' : 'text-slate-600'}`} />
-                <span className={`text-xs font-bold font-mono ${isStreakActive ? 'text-white' : 'text-slate-500'}`}>{streak}</span>
+        <div className="flex items-center gap-1.5 bg-gray-900/80 border border-gray-700/50 rounded-full pl-2 pr-3 py-1 shadow-sm backdrop-blur-md">
+            {/* Count & Icon Overlapped */}
+            <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
+                <Flame 
+                    size={16} 
+                    strokeWidth={1.5}
+                    className={`transition-colors duration-300 ${isStreakActive ? 'text-orange-500 fill-orange-500/20 animate-pulse' : 'text-slate-700'}`} 
+                />
+                <span className={`absolute inset-0 flex items-center justify-center translate-x-[6px] text-[9px] font-bold font-mono pt-0.5 z-10 ${isStreakActive ? 'text-white' : 'text-slate-500'}`}>
+                    {streak}
+                </span>
             </div>
 
             {/* Visual Tracker */}
-            <div className="relative w-24 h-3 flex items-center">
+            <div className="relative w-20 h-1.5 flex items-center">
                 {/* Track Line */}
                 <div className="absolute left-0 right-0 h-0.5 bg-gray-800 rounded-full overflow-hidden">
                      <div 
@@ -34,7 +41,7 @@ const MomentumWidget: React.FC<{ streak: number; multiplier: number }> = ({ stre
                             <div 
                                 key={i}
                                 className={`
-                                    w-2 h-2 rounded-full border transition-all duration-300 z-10
+                                    w-1.5 h-1.5 rounded-full border transition-all duration-300 z-10
                                     ${isCompleted 
                                         ? 'bg-orange-500 border-orange-400 shadow-[0_0_4px_rgba(249,115,22,0.5)]' 
                                         : 'bg-gray-900 border-gray-700'}
@@ -47,7 +54,7 @@ const MomentumWidget: React.FC<{ streak: number; multiplier: number }> = ({ stre
 
             {/* Multiplier Badge */}
             {multiplier > 1.0 && (
-                <div className="hidden sm:block text-[9px] font-bold text-orange-300 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/20">
+                <div className="hidden sm:block text-[9px] font-bold text-orange-300 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/20 ml-1">
                     x{multiplier.toFixed(1)}
                 </div>
             )}
