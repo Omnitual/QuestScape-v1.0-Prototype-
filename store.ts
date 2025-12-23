@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { useReducer, useEffect, createContext, useContext, ReactNode } from 'react';
-import { Quest, QuestType, GameState, DifficultyModifier, TITLES, DEFAULT_SIDE_QUEST_TEMPLATES, DEFAULT_EVENT_TEMPLATES, SideQuestTemplate, EventTemplate, GameSettings } from './types';
+import { Quest, QuestType, GameState, DifficultyModifier, TITLES, DEFAULT_SIDE_QUEST_TEMPLATES, DEFAULT_EVENT_TEMPLATES, DEFAULT_FOCUS_TEMPLATES, SideQuestTemplate, EventTemplate, FocusTemplate, GameSettings } from './types';
 import { 
     calculateMaxXP, 
     getTitleForLevel, 
@@ -11,7 +14,8 @@ import {
     calculateTotalMultiplier, 
     generateDynamicSideQuests, 
     performDayTransition, 
-    MAX_SIDE_QUESTS_ACTIVE, 
+    MAX_SIDE_QUESTS_ACTIVE,
+    MAX_FOCUS_QUESTS_ACTIVE,
     MAX_DAILY_SIDE_ACCEPTS, 
     MAX_DAILY_REROLLS, 
     calculateGlobalStreak 
@@ -27,19 +31,21 @@ type Action =
     | { type: 'UPDATE_PROFILE'; payload: { name: string; wakeUpTime: string; idealDays: number[] } }
     | { type: 'UPDATE_SETTINGS'; payload: Partial<GameSettings> }
     | { type: 'ADD_QUEST' | 'EDIT_QUEST'; payload: any }
-    | { type: 'DELETE_QUEST' | 'RESTORE_QUEST' | 'PERMANENT_DELETE_QUEST' | 'TOGGLE_QUEST' | 'REROLL_NOTICE_BOARD_SLOT' | 'DELETE_SIDE_QUEST_TEMPLATE' | 'DELETE_EVENT_TEMPLATE'; payload: string }
+    | { type: 'DELETE_QUEST' | 'RESTORE_QUEST' | 'PERMANENT_DELETE_QUEST' | 'TOGGLE_QUEST' | 'REROLL_NOTICE_BOARD_SLOT' | 'DELETE_SIDE_QUEST_TEMPLATE' | 'DELETE_EVENT_TEMPLATE' | 'DELETE_FOCUS_TEMPLATE'; payload: string }
     | { type: 'TOGGLE_QUEST_STEP'; payload: { questId: string; stepId: string } }
     | { type: 'UPDATE_QUEST_PROGRESS'; payload: { id: string; progress: number } }
     | { type: 'UPDATE_FOCUS_TIMER'; payload: { id: string; remainingSeconds: number } }
     | { type: 'ACCEPT_SIDE_QUEST'; payload: Quest }
     | { type: 'SAVE_SIDE_QUEST_TEMPLATE'; payload: SideQuestTemplate }
     | { type: 'SAVE_EVENT_TEMPLATE'; payload: EventTemplate }
+    | { type: 'SAVE_FOCUS_TEMPLATE'; payload: FocusTemplate }
     | { type: 'TEST_ADD_XP' | 'TEST_ADD_GOLD'; payload: number }
     | { type: 'DAILY_RESET' | 'REFRESH_NOTICE_BOARD' | 'TEST_ADD_STREAK' | 'TEST_FAIL_ALL_QUESTS' | 'FULL_RESET' | 'ACKNOWLEDGE_EVENTS' };
 
 // --- Initial State Factory ---
 const getInitialState = (): GameState => {
     const sideQuestTemplates = DEFAULT_SIDE_QUEST_TEMPLATES.map((t, i) => ({ ...t, id: `sqt-${i}` }));
+    const focusTemplates = DEFAULT_FOCUS_TEMPLATES.map((t, i) => ({ ...t, id: `foc-tmpl-${i}` }));
     const settings: GameSettings = {
         dailyFailPenalty: 0.75,
         sideQuestRiskChance: 0.15
@@ -123,11 +129,12 @@ const getInitialState = (): GameState => {
         settings,
         quests: [onboardingHeroQuest, firstQuest],
         archivedQuests: [],
-        availableSideQuests: generateDynamicSideQuests(sideQuestTemplates, settings),
+        availableSideQuests: generateDynamicSideQuests(sideQuestTemplates, settings, 3, focusTemplates),
         sideQuestsChosenCount: 0,
         lastSideQuestGenDate: new Date().toDateString(),
         sideQuestTemplates,
         eventTemplates: DEFAULT_EVENT_TEMPLATES.map((t, i) => ({ ...t, id: `evt-tmpl-${i}` })),
+        focusTemplates,
         activityLog: [createLogEntry("AUTO_INIT", "Hero Adventurer initialized.")],
         eventQueue: [createGameEvent('SYSTEM_MESSAGE', "Welcome to QuestLife. Your journey is ready.")]
     };
@@ -169,6 +176,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 archivedQuests: payload.archivedQuests || [],
                 sideQuestTemplates: payload.sideQuestTemplates || initialState.sideQuestTemplates,
                 eventTemplates: payload.eventTemplates || initialState.eventTemplates,
+                focusTemplates: payload.focusTemplates || initialState.focusTemplates,
                 availableSideQuests: payload.availableSideQuests || [],
                 activityLog: payload.activityLog || [],
                 eventQueue: [] // Always clean queue on load
@@ -225,7 +233,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 hasOnboarded: true,
                 stats: { ...state.stats, name, wakeUpTime, xpModifier },
                 quests: [heroQuest, initialQuest],
-                availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings),
+                availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 3, state.focusTemplates),
                 lastSideQuestGenDate: new Date().toDateString(),
                 activityLog: [...state.activityLog, log],
                 eventQueue: [createGameEvent('SYSTEM_MESSAGE', `Welcome, ${name}. Your journey begins.`)]
@@ -528,29 +536,43 @@ const gameReducer = (state: GameState, action: Action): GameState => {
         }
 
         case 'ACCEPT_SIDE_QUEST': {
-            const activeSideQuests = state.quests.filter(q => q.type === QuestType.SIDE && !q.completed).length;
-            if (activeSideQuests >= MAX_SIDE_QUESTS_ACTIVE) return state;
-            if ((state.stats.dailySideQuestsTaken || 0) >= MAX_DAILY_SIDE_ACCEPTS) return state;
+            const acceptedQuest = action.payload;
+            
+            // Limit Checks
+            if (acceptedQuest.type === QuestType.SIDE) {
+                 const activeSideQuests = state.quests.filter(q => q.type === QuestType.SIDE && !q.completed).length;
+                 if (activeSideQuests >= MAX_SIDE_QUESTS_ACTIVE) return state;
+                 if ((state.stats.dailySideQuestsTaken || 0) >= MAX_DAILY_SIDE_ACCEPTS) return state;
+            } else if (acceptedQuest.type === QuestType.FOCUS) {
+                 const activeFocusQuests = state.quests.filter(q => q.type === QuestType.FOCUS && !q.completed).length;
+                 if (activeFocusQuests >= MAX_FOCUS_QUESTS_ACTIVE) return state;
+            }
 
-            const log = createLogEntry("SIDE_QUEST_ACCEPTED", `Accepted side quest: "${action.payload.title}"`);
-            const replacements = generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 1);
+            const log = createLogEntry("QUEST_ACCEPTED", `Accepted ${acceptedQuest.type}: "${acceptedQuest.title}"`);
+            
+            // Generate replacement logic
+            // Note: We need to pass focusTemplates here to mix them in, similar to init/reset
+            const replacements = generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 1, state.focusTemplates);
             const replacement = replacements.length > 0 ? replacements[0] : null;
-            if (replacement) replacement.id = `sq-rep-${Date.now()}`;
+            if (replacement) replacement.id = `rep-${Date.now()}`;
 
-            let newAvailable = state.availableSideQuests.filter(q => q.id !== action.payload.id);
+            let newAvailable = state.availableSideQuests.filter(q => q.id !== acceptedQuest.id);
             if (replacement) newAvailable = [...newAvailable, replacement];
 
             return {
                 ...state,
                 stats: {
                     ...state.stats,
-                    dailySideQuestsTaken: (state.stats.dailySideQuestsTaken || 0) + 1
+                    // Only increment counter for Side Quests, not Focus sessions (Time Chambers are generally repeatable tools)
+                    dailySideQuestsTaken: acceptedQuest.type === QuestType.SIDE 
+                        ? (state.stats.dailySideQuestsTaken || 0) + 1 
+                        : state.stats.dailySideQuestsTaken
                 },
-                quests: [...state.quests, action.payload],
+                quests: [...state.quests, acceptedQuest],
                 availableSideQuests: newAvailable,
                 sideQuestsChosenCount: state.sideQuestsChosenCount + 1,
                 activityLog: [...state.activityLog, log],
-                eventQueue: [...state.eventQueue, createGameEvent('QUEST_ACCEPTED', `Accepted: ${action.payload.title}`)]
+                eventQueue: [...state.eventQueue, createGameEvent('QUEST_ACCEPTED', `Accepted: ${acceptedQuest.title}`)]
             };
         }
 
@@ -562,10 +584,11 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             const rerollCost = (questToSwap.isRisk || questToSwap.hasPenalty) ? 30 : 15;
             if (state.stats.gold < rerollCost) return state;
 
-            const replacements = generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 1);
+            // Generate replacement
+            const replacements = generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 1, state.focusTemplates);
             const replacement = replacements.length > 0 ? replacements[0] : null;
             if (!replacement) return state;
-            replacement.id = `sq-reroll-${Date.now()}`;
+            replacement.id = `reroll-${Date.now()}`;
 
             const newAvailable = state.availableSideQuests.map(q => q.id === questId ? replacement : q);
             const log = createLogEntry("REROLL_NOTICE_BOARD", `Rerolled quest "${questToSwap.title}" for ${rerollCost}g`);
@@ -621,6 +644,25 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 eventQueue: [...state.eventQueue, createGameEvent('SYSTEM_MESSAGE', "Event deleted.")]
             };
 
+        case 'SAVE_FOCUS_TEMPLATE': {
+            const exists = state.focusTemplates.find(t => t.id === action.payload.id);
+            const newTemplates = exists
+                ? state.focusTemplates.map(t => t.id === action.payload.id ? action.payload : t)
+                : [...state.focusTemplates, action.payload];
+            return { 
+                ...state, 
+                focusTemplates: newTemplates,
+                eventQueue: [...state.eventQueue, createGameEvent('SYSTEM_MESSAGE', "Focus template saved.")]
+            };
+        }
+
+        case 'DELETE_FOCUS_TEMPLATE':
+            return { 
+                ...state, 
+                focusTemplates: state.focusTemplates.filter(t => t.id !== action.payload),
+                eventQueue: [...state.eventQueue, createGameEvent('SYSTEM_MESSAGE', "Focus template deleted.")]
+            };
+
         case 'DAILY_RESET': {
             const today = new Date().toDateString();
             if (state.lastSideQuestGenDate === today) return state;
@@ -631,7 +673,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             const log = createLogEntry("DEBUG_REFRESH_BOARD", "Debug: Notice board refreshed.");
             return {
                 ...state,
-                availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings),
+                availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 3, state.focusTemplates),
                 sideQuestsChosenCount: 0,
                 activityLog: [...state.activityLog, log],
                 eventQueue: [...state.eventQueue, createGameEvent('SYSTEM_MESSAGE', "Board refreshed.")]
@@ -703,6 +745,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
                 ...getInitialState(),
                 sideQuestTemplates: getInitialState().sideQuestTemplates,
                 eventTemplates: getInitialState().eventTemplates,
+                focusTemplates: getInitialState().focusTemplates,
                 eventQueue: [createGameEvent('SYSTEM_MESSAGE', "System Reset Complete.")]
             };
 

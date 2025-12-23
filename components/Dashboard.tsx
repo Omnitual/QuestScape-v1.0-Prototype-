@@ -1,8 +1,10 @@
 
+
 import React, { useState } from 'react';
 import { useGame } from '../store';
 import { useToast } from './ToastContext'; // Only kept for custom messages if needed, though mostly moved to event handler
 import { QuestType, Quest } from '../types';
+import { MAX_SIDE_QUESTS_ACTIVE, MAX_FOCUS_QUESTS_ACTIVE } from '../gameMechanics';
 import QuestCard from './QuestCard';
 import { QuestModal } from './QuestModal';
 import { Plus, Clock, Flame, Coins, Zap, Sparkles, Star, RefreshCw, Trophy, CheckCircle2, Lock, Flag, Settings, Hourglass, Dices, Scroll, Repeat, Sword } from 'lucide-react';
@@ -27,9 +29,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
 
     // UI Logic
     const activeSideQuestsCount = state.quests.filter(q => q.type === QuestType.SIDE && !q.completed).length;
-    const isSideQuestActiveLimitReached = activeSideQuestsCount >= 5;
+    const activeFocusQuestsCount = state.quests.filter(q => q.type === QuestType.FOCUS && !q.completed).length;
+
     const isDailyAcceptLimitReached = (state.stats.dailySideQuestsTaken || 0) >= 2;
-    const canAcceptSideQuest = !isSideQuestActiveLimitReached && !isDailyAcceptLimitReached;
     const isStreakActive = state.stats.globalStreak > 0;
 
     const isQuestActive = (q: Quest) => {
@@ -425,7 +427,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                     </div>
                 </div>
 
-                {/* Notice Board */}
+                {/* Notice Board (Offers) */}
                 <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/50">
                         <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
@@ -438,7 +440,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                 <span className="text-xs font-mono font-bold">{rerollsLeft}/2</span>
                             </div>
 
-                            <div className={`flex items-center gap-1.5 text-[10px] uppercase font-bold ${isDailyAcceptLimitReached ? 'text-red-400' : 'text-slate-500'}`} title="Daily Acceptance Limit">
+                            <div className={`flex items-center gap-1.5 text-[10px] uppercase font-bold ${isDailyAcceptLimitReached ? 'text-red-400' : 'text-slate-500'}`} title="Daily Acceptance Limit (Side Quests)">
                                 <Scroll size={14} />
                                 <span className="font-mono text-xs">{(state.stats.dailySideQuestsTaken || 0)}/2</span>
                             </div>
@@ -449,7 +451,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                         {state.availableSideQuests.map(quest => {
                             const rerollCost = (quest.isRisk || quest.hasPenalty) ? 30 : 15;
                             const canReroll = rerollsLeft > 0 && state.stats.gold >= rerollCost;
-                            const isDisabled = !canAcceptSideQuest;
+                            
+                            // Limits logic based on type
+                            const isSideLimitReached = quest.type === QuestType.SIDE && (activeSideQuestsCount >= MAX_SIDE_QUESTS_ACTIVE || isDailyAcceptLimitReached);
+                            const isFocusLimitReached = quest.type === QuestType.FOCUS && activeFocusQuestsCount >= MAX_FOCUS_QUESTS_ACTIVE;
+                            
+                            const isDisabled = isSideLimitReached || isFocusLimitReached;
                             const isAccepting = acceptingQuestId === quest.id;
 
                             return (
@@ -474,6 +481,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                                                     <RefreshCw size={10} />
                                                     <span className={canReroll ? "text-yellow-400" : ""}>{rerollCost}g</span>
                                                 </button>
+                                            </div>
+                                        )}
+                                        {isDisabled && (
+                                            <div className="absolute inset-0 flex items-center justify-center z-50">
+                                                <div className="bg-black/80 text-white text-[10px] uppercase font-bold px-2 py-1 rounded border border-gray-600">
+                                                    Limit Reached
+                                                </div>
                                             </div>
                                         )}
                                     </QuestCard>
@@ -504,18 +518,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                 </section>
             )}
 
-            {/* 4. Time Chamber Section */}
+            {/* 4. Time Chamber Section - No Manual Add */}
             <section className="animate-fade-in">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
                     <h2 className="text-xl font-bold text-cyan-400 font-cinzel tracking-wide flex items-center gap-2">
                         <Hourglass size={20} /> Time Chamber
                     </h2>
-                    <button onClick={() => setIsAdding(QuestType.FOCUS)} className="text-slate-500 hover:text-cyan-400 transition">
-                        <Plus size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                         <span className="text-xs text-gray-500 font-bold">{activeFocusQuestsCount}/{MAX_FOCUS_QUESTS_ACTIVE}</span>
+                    </div>
                 </div>
                 <div className="space-y-3">
-                    {focusQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">No active focus sessions.</p>}
+                    {focusQuests.length === 0 && <p className="text-slate-600 text-sm italic py-4">No active chambers. Check the Notice Board.</p>}
                     {focusQuests.map(q => <QuestCard key={q.id} quest={q} onDelete={onDelete} onEdit={onEdit} onToggle={onToggle} />)}
                 </div>
             </section>
@@ -543,10 +557,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onDelete, onEdit, onToggle }) => 
                             <Sword size={20} /> Side Quests
                         </h2>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 font-bold">{activeSideQuestsCount}/5</span>
-                            <button onClick={() => setIsAdding(QuestType.SIDE)} className="text-slate-500 hover:text-emerald-400 transition">
-                                <Plus size={20} />
-                            </button>
+                            <span className="text-xs text-gray-500 font-bold">{activeSideQuestsCount}/{MAX_SIDE_QUESTS_ACTIVE}</span>
                         </div>
                     </div>
                     <div className="space-y-3">

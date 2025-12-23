@@ -1,4 +1,5 @@
 
+
 import { 
     UserStats, 
     TITLES, 
@@ -11,11 +12,13 @@ import {
     EventTemplate, 
     GameSettings, 
     REWARD_MULTIPLIERS, 
-    GameState 
+    GameState,
+    FocusTemplate
 } from './types';
 
 // --- Constants ---
 export const MAX_SIDE_QUESTS_ACTIVE = 5; 
+export const MAX_FOCUS_QUESTS_ACTIVE = 3;
 export const MAX_DAILY_SIDE_ACCEPTS = 2; 
 export const MAX_DAILY_REROLLS = 2;
 
@@ -99,47 +102,99 @@ export const calculateGlobalStreak = (history: Record<string, boolean>): number 
 
 // --- Content Generation Logic ---
 
-// Side Quest Generation with Risk Logic
-export const generateDynamicSideQuests = (templates: SideQuestTemplate[], settings: GameSettings, count: number = 3): Quest[] => {
-    if (!templates || templates.length === 0) return [];
-    const shuffled = [...templates].sort(() => 0.5 - Math.random());
+// Helper to generate a Focus Quest from a template
+const createFocusQuestFromTemplate = (template: FocusTemplate): Quest => {
+    const difficulty: QuestDifficulty = template.duration > 45 ? 'HARD' : template.duration > 20 ? 'MEDIUM' : 'EASY';
+    const multiplier = REWARD_MULTIPLIERS[difficulty];
+    
+    // Base rewards for Focus: 2XP per min, 0.2g per min
+    const calcXP = Math.ceil((template.duration * 2) * multiplier);
+    const calcGold = Math.ceil((template.duration * 0.2) * multiplier);
+    const calcQP = Math.ceil((template.duration / 15) * multiplier);
 
-    return shuffled.slice(0, count).map((template, idx) => {
-        const baseQuantity = getRandomInt(template.min, template.max);
-        const range = template.max - template.min;
-        const progress = (baseQuantity - template.min) / (range || 1);
-        const difficulty: QuestDifficulty = progress > 0.7 ? 'HARD' : progress > 0.3 ? 'MEDIUM' : 'EASY';
-        const isRisk = Math.random() < settings.sideQuestRiskChance;
-        const finalRisk = isRisk || difficulty === 'HARD';
-        const multiplier = REWARD_MULTIPLIERS[difficulty];
-        const finalQuantity = Math.ceil(baseQuantity * multiplier);
-        const riskGoldBonus = finalRisk ? 6 : 0;
-        const calcXP = Math.ceil(finalQuantity * template.unitXP * multiplier);
-        const rawGoldValue = (finalQuantity * template.unitGold) + riskGoldBonus;
-        const calcGold = Math.ceil(rawGoldValue * multiplier);
-        const extraQP = Math.floor(progress * 2);
-        const calcQP = Math.ceil(((template.baseQP || 1) + extraQP) * multiplier);
+    // 1 Day Expiry for board items
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
+    dueDate.setHours(23, 59, 59, 999);
 
-        const durationDays = getRandomInt(3, 7);
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + durationDays);
-        dueDate.setHours(23, 59, 59, 999);
+    return {
+        id: `foc-dyn-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        title: template.title,
+        description: `Time Chamber: ${template.duration} minutes`,
+        type: QuestType.FOCUS,
+        completed: false,
+        xpReward: applyRngVariance(calcXP),
+        goldReward: Math.max(1, applyRngVariance(calcGold)),
+        qpReward: calcQP,
+        createdAt: Date.now(),
+        difficulty: difficulty,
+        hasPenalty: false,
+        dueDate: dueDate.toISOString(),
+        focusDurationMinutes: template.duration,
+        focusSecondsRemaining: template.duration * 60
+    };
+};
 
-        return {
-            id: `sq-dyn-${Date.now()}-${idx}`,
-            title: template.template.replace('{n}', finalQuantity.toString()),
-            type: QuestType.SIDE,
-            completed: false,
-            xpReward: applyRngVariance(calcXP),
-            goldReward: Math.max(1, applyRngVariance(calcGold)),
-            qpReward: calcQP,
-            createdAt: Date.now(),
-            difficulty: difficulty,
-            hasPenalty: finalRisk,
-            isRisk: finalRisk,
-            dueDate: dueDate.toISOString()
-        };
-    });
+// Updated Generation to mix Side Quests and Focus Quests
+export const generateDynamicSideQuests = (
+    sqTemplates: SideQuestTemplate[], 
+    settings: GameSettings, 
+    count: number = 3,
+    focusTemplates: FocusTemplate[] = []
+): Quest[] => {
+    const quests: Quest[] = [];
+    
+    // Safety check
+    if ((!sqTemplates || sqTemplates.length === 0) && (!focusTemplates || focusTemplates.length === 0)) return [];
+
+    for (let i = 0; i < count; i++) {
+        // 20% chance to spawn a Time Chamber (Focus Quest) if templates exist
+        const isFocus = focusTemplates.length > 0 && Math.random() < 0.2;
+
+        if (isFocus) {
+            const template = focusTemplates[Math.floor(Math.random() * focusTemplates.length)];
+            quests.push(createFocusQuestFromTemplate(template));
+        } else if (sqTemplates.length > 0) {
+            // Generate Side Quest
+            const template = sqTemplates[Math.floor(Math.random() * sqTemplates.length)];
+            const baseQuantity = getRandomInt(template.min, template.max);
+            const range = template.max - template.min;
+            const progress = (baseQuantity - template.min) / (range || 1);
+            const difficulty: QuestDifficulty = progress > 0.7 ? 'HARD' : progress > 0.3 ? 'MEDIUM' : 'EASY';
+            const isRisk = Math.random() < settings.sideQuestRiskChance;
+            const finalRisk = isRisk || difficulty === 'HARD';
+            const multiplier = REWARD_MULTIPLIERS[difficulty];
+            const finalQuantity = Math.ceil(baseQuantity * multiplier);
+            const riskGoldBonus = finalRisk ? 6 : 0;
+            const calcXP = Math.ceil(finalQuantity * template.unitXP * multiplier);
+            const rawGoldValue = (finalQuantity * template.unitGold) + riskGoldBonus;
+            const calcGold = Math.ceil(rawGoldValue * multiplier);
+            const extraQP = Math.floor(progress * 2);
+            const calcQP = Math.ceil(((template.baseQP || 1) + extraQP) * multiplier);
+
+            const durationDays = getRandomInt(3, 7);
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + durationDays);
+            dueDate.setHours(23, 59, 59, 999);
+
+            quests.push({
+                id: `sq-dyn-${Date.now()}-${i}`,
+                title: template.template.replace('{n}', finalQuantity.toString()),
+                type: QuestType.SIDE,
+                completed: false,
+                xpReward: applyRngVariance(calcXP),
+                goldReward: Math.max(1, applyRngVariance(calcGold)),
+                qpReward: calcQP,
+                createdAt: Date.now(),
+                difficulty: difficulty,
+                hasPenalty: finalRisk,
+                isRisk: finalRisk,
+                dueDate: dueDate.toISOString()
+            });
+        }
+    }
+
+    return quests;
 };
 
 export const generateEventsFromPool = (templates: EventTemplate[], settings: GameSettings): Quest[] => {
@@ -210,7 +265,7 @@ export const performDayTransition = (state: GameState): GameState => {
         return null;
     }).filter(Boolean) as Quest[];
 
-    // 3. Generate New Daily Content
+    // 3. Generate New Daily Content (Events only here, Notice Board handled by state init/refresh)
     const newEvents = generateEventsFromPool(state.eventTemplates, state.settings);
     resetQuests.push(...newEvents);
 
@@ -235,7 +290,8 @@ export const performDayTransition = (state: GameState): GameState => {
         },
         quests: resetQuests,
         archivedQuests: newArchivedQuests,
-        availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings),
+        // Regenerate Notice Board mixing Side Quests and Focus Quests
+        availableSideQuests: generateDynamicSideQuests(state.sideQuestTemplates, state.settings, 3, state.focusTemplates),
         sideQuestsChosenCount: 0,
         lastSideQuestGenDate: todayStr,
         activityLog: [...state.activityLog, logEntry],

@@ -120,6 +120,12 @@ export interface EventTemplate {
     qpReward: number;
 }
 
+export interface FocusTemplate {
+    id: string;
+    title: string;
+    duration: number; // minutes
+}
+
 export interface GameSettings {
     dailyFailPenalty: number; // Multiplier for fatigue
     sideQuestRiskChance: number; // 0.15 (15% chance)
@@ -153,6 +159,7 @@ export interface GameState {
     lastSideQuestGenDate: string;
     sideQuestTemplates: SideQuestTemplate[];
     eventTemplates: EventTemplate[];
+    focusTemplates: FocusTemplate[]; // New Template Type
     activityLog: ActivityLogEntry[];
     eventQueue: GameEvent[]; // The centralized event bus
 }
@@ -195,6 +202,12 @@ export const DEFAULT_EVENT_TEMPLATES: Omit<EventTemplate, 'id'>[] = [
         goldReward: 0,
         qpReward: 5
     }
+];
+
+export const DEFAULT_FOCUS_TEMPLATES: Omit<FocusTemplate, 'id'>[] = [
+    { title: "Pomodoro Session", duration: 25 },
+    { title: "Quick Reset", duration: 5 },
+    { title: "Deep Work Block", duration: 60 }
 ];
 
 export const SIDE_QUEST_POOL: string[] = [];

@@ -1,11 +1,14 @@
+
+
 import React, { useState } from 'react';
 import { useGame } from '../store';
 import { useToast } from './ToastContext';
-import { Terminal, Plus, Coins, AlertTriangle, Settings, Flame, User, Sliders, Download, Upload, Calendar, Edit2, Save, Trophy, Zap, CheckCircle2, History, Sword, RotateCcw, Sparkles } from 'lucide-react';
-import { GameState, QuestType, SideQuestTemplate, EventTemplate } from '../types';
+import { Terminal, Plus, Coins, AlertTriangle, Settings, Flame, User, Sliders, Download, Upload, Calendar, Edit2, Save, Trophy, Zap, CheckCircle2, History, Sword, RotateCcw, Sparkles, Hourglass } from 'lucide-react';
+import { GameState, QuestType, SideQuestTemplate, EventTemplate, FocusTemplate } from '../types';
 import StatGraph from './StatGraph';
 import TemplateModal from './TemplateModal';
 import EventTemplateModal from './EventTemplateModal';
+import FocusTemplateModal from './FocusTemplateModal';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -32,10 +35,14 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
     // Template Management State
     const [isAddingTemplate, setIsAddingTemplate] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<SideQuestTemplate | null>(null);
+    
     const [isAddingEvent, setIsAddingEvent] = useState(false);
     const [editingEvent, setEditingEvent] = useState<EventTemplate | null>(null);
 
-    const { sideQuestTemplates, eventTemplates } = state;
+    const [isAddingFocus, setIsAddingFocus] = useState(false);
+    const [editingFocus, setEditingFocus] = useState<FocusTemplate | null>(null);
+
+    const { sideQuestTemplates, eventTemplates, focusTemplates } = state;
 
     const saveProfile = () => {
         dispatch({
@@ -81,6 +88,16 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
         showToast("Event Deleted", undefined, 'default');
     };
 
+    const handleSaveFocus = (template: FocusTemplate) => {
+        dispatch({ type: 'SAVE_FOCUS_TEMPLATE', payload: template });
+        showToast("Focus Template Saved", undefined, 'default');
+    };
+
+    const handleDeleteFocus = (id: string) => {
+        dispatch({ type: 'DELETE_FOCUS_TEMPLATE', payload: id });
+        showToast("Focus Template Deleted", undefined, 'default');
+    };
+
     const exportData = () => {
         const exportObj = {
             metadata: {
@@ -94,7 +111,8 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                 active: state.quests,
                 archived: state.archivedQuests,
                 sideQuestTemplates: state.sideQuestTemplates,
-                eventTemplates: state.eventTemplates
+                eventTemplates: state.eventTemplates,
+                focusTemplates: state.focusTemplates
             },
             activityLog: state.activityLog
         };
@@ -132,6 +150,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                         archivedQuests: Array.isArray(parsed.quests.archived) ? parsed.quests.archived : [],
                         sideQuestTemplates: Array.isArray(parsed.quests.sideQuestTemplates) ? parsed.quests.sideQuestTemplates : [],
                         eventTemplates: Array.isArray(parsed.quests.eventTemplates) ? parsed.quests.eventTemplates : [],
+                        focusTemplates: Array.isArray(parsed.quests.focusTemplates) ? parsed.quests.focusTemplates : [],
                         activityLog: Array.isArray(parsed.activityLog) ? parsed.activityLog : [],
                         availableSideQuests: parsed.availableSideQuests || [],
                         sideQuestsChosenCount: parsed.sideQuestsChosenCount || 0,
@@ -467,7 +486,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                         </div>
                     </section>
 
-                    {/* 2. Content Pools (Migrated from QuestLog) */}
+                    {/* 2. Side Quest Templates */}
                     <section className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-lg">
                         <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -504,7 +523,46 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                             ))}
                         </div>
                     </section>
+                    
+                    {/* 3. Focus Templates (Time Chamber) */}
+                    <section className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-lg">
+                        <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Hourglass size={16} className="text-cyan-400" />
+                                <h3 className="font-bold text-gray-200 text-sm uppercase tracking-wider">Time Chamber Templates</h3>
+                            </div>
+                            <button
+                                onClick={() => setIsAddingFocus(true)}
+                                className="flex items-center gap-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 border border-cyan-600/30 px-3 py-1.5 rounded text-[10px] font-bold uppercase transition"
+                            >
+                                <Plus size={12} /> Add
+                            </button>
+                        </div>
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {(!focusTemplates || focusTemplates.length === 0) && (
+                                <div className="col-span-full text-center py-8 text-gray-600 text-xs italic">
+                                    No focus templates configured.
+                                </div>
+                            )}
+                            {focusTemplates?.map((template) => (
+                                <div
+                                    key={template.id}
+                                    onClick={() => setEditingFocus(template)}
+                                    className="bg-gray-800 border border-gray-700 p-3 rounded hover:border-cyan-500 cursor-pointer group flex justify-between items-center"
+                                >
+                                    <div>
+                                        <div className="font-bold text-sm text-gray-200 group-hover:text-cyan-100">{template.title}</div>
+                                        <div className="text-[10px] text-gray-500 mt-1 flex gap-2">
+                                            <span>{template.duration} minutes</span>
+                                        </div>
+                                    </div>
+                                    <Edit2 size={12} className="text-gray-600 group-hover:text-cyan-400" />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
 
+                    {/* 4. Event Templates */}
                     <section className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-lg">
                         <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -626,6 +684,18 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                     }}
                     onSave={handleSaveEvent}
                     onDelete={handleDeleteEvent}
+                />
+            )}
+
+            {(isAddingFocus || editingFocus) && (
+                <FocusTemplateModal
+                    initialTemplate={editingFocus || undefined}
+                    onClose={() => {
+                        setIsAddingFocus(false);
+                        setEditingFocus(null);
+                    }}
+                    onSave={handleSaveFocus}
+                    onDelete={handleDeleteFocus}
                 />
             )}
         </div>
